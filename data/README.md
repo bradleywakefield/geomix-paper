@@ -25,7 +25,7 @@ repository. To reproduce the real-data results, please follow the steps below:
 ## Simulation Data
 
 Synthetic datasets used in the simulation studies are generated programmatically
-and are **not** stored in this directory. Run:
+and are stored in this directory. Run:
 
 ```bash
 # TODO: add the command/script you use to generate simulation data
