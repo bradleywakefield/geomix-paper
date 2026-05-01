@@ -18,7 +18,7 @@ path <- "results/simulation/"
 dir.create(path, recursive = TRUE, showWarnings = FALSE)
 dir.create("results/figures", recursive = TRUE, showWarnings = FALSE)
 
-synthetic_list <- readRDS("data/synthetic_list.rds")
+synthetic_list <- readRDS("data/simulation/synthetic_data.rds")
 
 geomix_setup <- setupGeoMixModel(
   data = synthetic_list$data,
@@ -624,7 +624,7 @@ saveRDS(merged_params_LGFM, file.path(path,"predictions","LGFM_params.rds"))
 source('scripts/utils/fit_competing_models.R')
 run_comparisons(path, depth_interval = c(24,50))
 
-## 3.9 Map figures (saves data/line_df.rds, data/cell_grid_map.rds) ----
+## 3.9 Map figures (saves data/processed/line_df.rds, data/processed/cell_grid_map.rds) ----
 source('scripts/05_map_figures.R')
 
 ## 3.10 Compute results ----

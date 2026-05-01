@@ -4,7 +4,7 @@ library(ggplot2)
 select <- dplyr::select
 box_cox <- function(y,lambda = 0.6) (y ^ lambda - 1) / lambda
 inv_box_cox <- function(y, lambda=0.6) (y * lambda + 1)^(1 / lambda)
-synthetic_list <- readRDS("data/synthetic_list.rds")
+synthetic_list <- readRDS("data/simulation/synthetic_data.rds")
 
 sample_matern32_vec <- function(depths, mu, sigma2, ell, nugget = 0) {
   D <- as.matrix(dist(depths))
@@ -16,7 +16,7 @@ sample_matern32_vec <- function(depths, mu, sigma2, ell, nugget = 0) {
   drop(chol(K) %*% rnorm(NROW(depths))) + mu
 }
 set.seed(1234)
-data_base <- read_csv("data/misspec.csv") %>%
+data_base <- read_csv("data/application/misspec_cpt.csv") %>%
   left_join(data.frame(Y1 = 1:8, a0 = synthetic_list$alpha[,1], a1 = synthetic_list$alpha[,2],
             sigma2 = synthetic_list$sigma2, l = synthetic_list$lD)) %>%
   group_by(Y1) %>%

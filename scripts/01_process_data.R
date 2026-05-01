@@ -16,7 +16,7 @@ su_colours <-c("yellow", "forestgreen", "maroon", "darkorange3", "darkblue", "re
 
 soil_units <- c("GT1","GT2","GT2c","GT3","GT4","GT5","GT5*","GT6")
 
-ijv_10cm <- readRDS("data/ijv_10cm.rds") %>%
+ijv_10cm <- readRDS("data/application/cpt_profiles.rds") %>%
   rename(x = Easting_m, y = Northing_m,
          bathymetry5m = Bathymetry_UHR_5m_LAT,
          bathymetryp5m = Bathymetry_MBES_0p5m_LAT,
@@ -24,8 +24,8 @@ ijv_10cm <- readRDS("data/ijv_10cm.rds") %>%
          qc = qn_MPa) %>%
   mutate(x = x*100, y = y*100) %>%
   mutate(d = round(depthBSF - bathymetryp5m,1))
-sample_wsynth <- readRDS("data/sample_wsynth.rds")
-synth_df <- readRDS("data/geophys/synth_df.rds")
+sample_wsynth <- readRDS("data/application/cpt_stratigraphy.rds")
+synth_df <- readRDS("data/application/seismic_cdp.rds")
 
 cdp_loctions <- distinct(synth_df,easting,northing) %>%
   mutate(id = 1:n(), Z2_flag = 0,
@@ -38,7 +38,7 @@ locs <- cdp_loctions %>%
   bind_rows(mutate(distinct(ijv_10cm,x,y),Z2_flag=1,id = 1:n()))
 ncpt <- nrow(distinct(ijv_10cm,x,y))
 
-saveRDS(locs,'data/locs.rds')
+saveRDS(locs,'data/processed/locs.rds')
 cell_size <- 35000
 
 loc_sf <- st_as_sf(locs,coords=c("x","y"))
@@ -55,7 +55,7 @@ dimy <- length(unique(coords[,2]))
 cell_grid$xid <- rep(1:dimx,dimy)
 cell_grid$yid <- rep(1:dimy,each=dimx)
 
-saveRDS(cell_grid,'data/cell_grid.rds')
+saveRDS(cell_grid,'data/processed/cell_grid.rds')
 
 # Now group by loc_id
 selected_points <- st_join(loc_sf, cell_grid, join = st_within) %>%
