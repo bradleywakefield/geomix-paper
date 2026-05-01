@@ -2,7 +2,7 @@ library(geowarp)
 library(tidyverse)
 
 run_comparisons <- function(path, depth_interval){
-  source("scripts/utils/model_builder.R")
+  source("scripts/utils/geowarp_builder.R")
   GWdata <- readRDS(paste0(path,'predictions/data.rds'))
   GWpred <- readRDS(paste0(path,'predictions/pred_df.rds'))
 

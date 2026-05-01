@@ -20,16 +20,17 @@ geomix-paper/
 │   ├── 02_fit_models.R             # MCMC inference + predictions (simulation & IJV application)
 │   ├── 03_simulation_results.R     # Figures for the simulation study
 │   ├── 04_application_results.R    # Figures for the IJV wind farm application
+│   ├── 05_map_figures.R            # Study area map figures + saves data/line_df.rds
 │   ├── utils/
-│   │   ├── eval_functions.R        # Scoring rules and evaluation metrics
-│   │   ├── model_builder.R         # GeoWarp competing model factory
-│   │   ├── run_comparisons.R       # Fits GeoWarp / GP / LM competing models
-│   │   └── group_lattice.R         # Hexagonal grouping of lattice points
+│   │   ├── prediction_scoring.R    # Scoring rules and evaluation metrics
+│   │   ├── geowarp_builder.R       # GeoWarp competing model factory
+│   │   ├── fit_competing_models.R  # Fits GeoWarp / GP / LM competing models
+│   │   └── hex_grouping.R          # Hexagonal grouping of lattice points
 │   └── exploratory/
-│       ├── eda.R                   # Study area maps (requires results in memory)
-│       ├── model_plot.R            # Cross-section diagnostic plots
+│       ├── eda.R                   # Study area maps (standalone version of 05_map_figures.R)
+│       ├── cross_section_plots.R   # Cross-section diagnostic plots
 │       ├── misspec.R               # Misspecification illustration
-│       └── generate_synthetic.R    # Synthetic data generator (demo)
+│       └── generate_simulation_data.R  # Synthetic data generator (demo)
 ├── data/
 │   └── README.md                   # Required input files and generated outputs
 └── results/
@@ -62,19 +63,20 @@ source("scripts/run_analysis.R")
 
 This executes the full pipeline in order:
 1. `01_process_data.R` — processes raw CPT and geophysics data
-2. `02_fit_models.R` — runs MCMC chains and produces all figures
-   - Internally sources `03_simulation_results.R` and `04_application_results.R`
+2. `02_fit_models.R` — runs MCMC chains and produces all figures; internally runs:
+   - `03_simulation_results.R` — simulation study figures
+   - `05_map_figures.R` — study area maps; saves `data/line_df.rds` (required by step below)
+   - `04_application_results.R` — IJV wind farm application figures
 
 > **Runtime note:** MCMC sampling is computationally intensive and was originally run on a 50-core server. `confirm_run()` prompts in `02_fit_models.R` let you skip sampling and load pre-saved results instead.
 
-### 4. Optional: map and diagnostic figures
+### 4. Optional: additional diagnostic figures
 
-These scripts require model results to already be in memory (run after Step 3):
+These scripts can be run independently after the main pipeline:
 
 ```r
-source("scripts/exploratory/eda.R")         # Study area maps + saves data/line_df.rds
-source("scripts/exploratory/model_plot.R")  # Cross-section diagnostic plots
-source("scripts/exploratory/misspec.R")     # Misspecification figure
+source("scripts/exploratory/cross_section_plots.R")  # Cross-section diagnostic plots
+source("scripts/exploratory/misspec.R")              # Misspecification figure
 ```
 
 ---

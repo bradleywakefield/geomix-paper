@@ -6,7 +6,7 @@ library(sf)
 library(patchwork)
 library(tidyverse)
 
-source('scripts/utils/eval_functions.R')
+source('scripts/utils/prediction_scoring.R')
 load("data/processed/data3D.RData")
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

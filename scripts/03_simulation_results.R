@@ -3,7 +3,7 @@
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 ## 1.1 Preliminaries  ----
-source('scripts/utils/eval_functions.R')
+source('scripts/utils/prediction_scoring.R')
 
 ## 1.2 Load data and parmeters ----
 names <- c("GP","GW","LM","GPwC","GWwC","LGFM","GeoMix")
