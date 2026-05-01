@@ -1,3 +1,8 @@
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 1 Preliminaries ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 1.1 Libraries ----
 library(matrixStats)
 library(tidyverse)
 library(reshape2)
@@ -8,6 +13,7 @@ library(scales)
 library(sf)
 select <- dplyr::select
 
+## 1.2 Helper functions ----
 box_cox <- function(y,lambda = 0.6) (y ^ lambda - 1) / lambda
 inv_box_cox <- function(y, lambda=0.6) (y * lambda + 1)^(1 / lambda)
 su_colours <-c("yellow", "forestgreen", "maroon", "darkorange3", "darkblue", "red4", "gray30",
@@ -16,6 +22,11 @@ su_colours <-c("yellow", "forestgreen", "maroon", "darkorange3", "darkblue", "re
 
 soil_units <- c("GT1","GT2","GT2c","GT3","GT4","GT5","GT5*","GT6")
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 2 Load raw data ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 2.1 CPT profiles ----
 ijv_10cm <- readRDS("data/application/cpt_profiles.rds") %>%
   rename(x = Easting_m, y = Northing_m,
          bathymetry5m = Bathymetry_UHR_5m_LAT,
@@ -24,9 +35,18 @@ ijv_10cm <- readRDS("data/application/cpt_profiles.rds") %>%
          qc = qn_MPa) %>%
   mutate(x = x*100, y = y*100) %>%
   mutate(d = round(depthBSF - bathymetryp5m,1))
+
+## 2.2 CPT stratigraphy annotations ----
 sample_wsynth <- readRDS("data/application/cpt_stratigraphy.rds")
+
+## 2.3 Seismic CDP data ----
 synth_df <- readRDS("data/application/seismic_cdp.rds")
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3 Spatial grid and locations ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 3.1 CDP spatial locations ----
 cdp_loctions <- distinct(synth_df,easting,northing) %>%
   mutate(id = 1:n(), Z2_flag = 0,
          easting = easting*100,
@@ -39,6 +59,8 @@ locs <- cdp_loctions %>%
 ncpt <- nrow(distinct(ijv_10cm,x,y))
 
 saveRDS(locs,'data/processed/locs.rds')
+
+## 3.2 Build 35 km spatial grid (local CRS) ----
 cell_size <- 35000
 
 loc_sf <- st_as_sf(locs,coords=c("x","y"))
@@ -57,7 +79,7 @@ cell_grid$yid <- rep(1:dimy,each=dimx)
 
 saveRDS(cell_grid,'data/processed/cell_grid.rds')
 
-# Now group by loc_id
+## 3.3 Assign locations to grid cells ----
 selected_points <- st_join(loc_sf, cell_grid, join = st_within) %>%
   mutate(dist_to_centre = st_distance(geometry, centre, by_element = TRUE)) %>%
   group_by(loc_id) %>%
@@ -66,6 +88,10 @@ selected_points <- st_join(loc_sf, cell_grid, join = st_within) %>%
   ungroup()
 
 which(!(1:ncpt %in% filter(selected_points,Z2_flag==1)$id))
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 4 Process geophysics (CDP) data ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 geophys <- synth_df %>%
   filter(depth <= 50) %>%
@@ -77,7 +103,11 @@ geophys <- synth_df %>%
   mutate(cdp_id = cdp_id+100000) %>% relocate(loc_id,xid,yid,.after = cdp_id) %>%
   drop_na(loc_id)
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 5 Process CPT data ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+## 5.1 Join stratigraphy to CPT measurements ----
 cpt_data <- ijv_10cm %>% left_join(
   sample_wsynth %>%
     select(CPT_name=name,depthBSF=depth,soilUnitID,soilUnit)
@@ -89,6 +119,7 @@ cpt_data <- ijv_10cm %>% left_join(
   left_join(st_set_geometry(select(filter(selected_points,Z2_flag==1),cdp_id=id,loc_id,xid,yid),value=NULL)) %>%
   relocate(loc_id,xid,yid,.after = name)
 
+## 5.2 Extend CPT profiles to full depth ----
 full_depths <- sample_wsynth %>%
   left_join(select(ijv_10cm,name=CPT_name,depth = depthBSF,d)) %>%
   select(name,depth = d) %>%
@@ -108,12 +139,18 @@ missing <- anti_join(rename(full_depths,CPT_name=name),
   relocate(loc_id,xid,yid,.after = name) %>%
   select(any_of(colnames(cpt_data)))
 
-##############################################################
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 6 Build combined 3D dataset ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 6.1 Combine geophysics and CPT ----
 data <- bind_rows(geophys,cpt_data,missing) %>% arrange(loc_id,d) %>%
   mutate(Z1 = as.integer(soilUnitID)) %>% rename(Z2 = bc_qc) %>%
   filter(d %in% seq(20,100,0.5))
 
 full_df <- data
+
+## 6.2 Train/test split (20% hold-out) ----
 set.seed(16)
 test_locs <- data %>% drop_na(Z2) %>% distinct(loc_id) %>%
   sample_n(size = ceiling(n()*0.2)) %>% pull(loc_id)
@@ -121,10 +158,12 @@ cpt_locs <- data %>% drop_na(Z2) %>% distinct(loc_id) %>%
   filter(!(loc_id %in% test_locs)) %>% pull(loc_id)
 data$Z2[which(data$loc_id %in% test_locs)] <- NA
 
+## 6.3 Depth grid and dimensions ----
 depth_vec <- sort(distinct(data,d)$d)
 dimd <- length(depth_vec)
 dims <- c(dimd,dimx,dimy)
 
+## 6.4 Depth groupings for parallel sampling ----
 lattice <- expand.grid(d=depth_vec,loc_id = 1:prod(dims[2],dims[3])) %>%
   left_join(select(data,loc_id,d,Z1 = soilUnitID)) %>%
   mutate(Z1 = replace_na(Z1,0)) %>% arrange(loc_id,d)
@@ -150,9 +189,12 @@ data <- data %>%
 
 drop_na(data)$groups %>% table()
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 7 Save processed data ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 rm(list = setdiff(ls(), c("data","lattice","dims","diagonals","K","full_df","test_locs","cpt_locs")))
 
-# Save processed data for use by downstream scripts
 dir.create("data/processed", recursive = TRUE, showWarnings = FALSE)
 save(data, full_df, test_locs, cpt_locs, dims, K,
      file = "data/processed/data3D.RData")
