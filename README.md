@@ -27,27 +27,28 @@ geomix-paper/
 │   ├── raw/               # Raw input data
 │   └── processed/         # Pre-processed data
 ├── figures/               # Generated figures (output)
-├── notebooks/             # Jupyter notebooks for exploration and figures
 ├── paper/                 # LaTeX source files for the paper
-├── src/                   # Core GeoMix source code
-│   ├── geomix/            # Main package
-│   │   ├── __init__.py
-│   │   ├── model.py       # Bayesian hierarchical model
-│   │   ├── potts.py       # Potts Markov random field
-│   │   ├── gp.py          # Class-specific Gaussian processes
-│   │   ├── vecchia.py     # Grouped Vecchia approximation
-│   │   └── inference.py   # MCMC / variational inference routines
-│   └── utils/             # Utility functions (plotting, I/O, etc.)
+├── R/                     # Core GeoMix source code
+│   ├── model.R            # Bayesian hierarchical model
+│   ├── potts.R            # Potts Markov random field
+│   ├── gp.R               # Class-specific Gaussian processes
+│   ├── vecchia.R          # Grouped Vecchia approximation
+│   ├── inference.R        # MCMC / variational inference routines
+│   └── utils.R            # Utility functions (plotting, I/O, etc.)
 ├── scripts/               # End-to-end experiment and figure scripts
-│   ├── simulation_study.py
-│   └── ijmuiden_ver.py
-├── tests/                 # Unit and integration tests
+│   ├── simulation_study.R
+│   ├── ijmuiden_ver.R
+│   └── make_figures.R
+├── tests/                 # Unit and integration tests (testthat)
+│   └── testthat/
 ├── .gitignore
+├── .Rprofile              # Activates renv on project open
 ├── CITATION.cff
 ├── CONTRIBUTING.md
+├── DESCRIPTION            # R package metadata
 ├── LICENSE
 ├── README.md
-└── requirements.txt
+└── renv.lock              # Reproducible dependency snapshot (renv)
 ```
 
 ---
@@ -56,25 +57,20 @@ geomix-paper/
 
 ### Prerequisites
 
-- Python ≥ 3.10
-- [conda](https://docs.conda.io/en/latest/) or [pip](https://pip.pypa.io/)
+- R ≥ 4.3
+- [renv](https://rstudio.github.io/renv/) for dependency management
 
-### Using pip
+### Setup
 
-```bash
-git clone https://github.com/bradleywakefield/geomix-paper.git
-cd geomix-paper
-pip install -r requirements.txt
+```r
+# Clone the repository, then in R:
+install.packages("renv")    # if not already installed
+renv::restore()             # install all dependencies from renv.lock
 ```
 
-### Using conda
-
-```bash
-git clone https://github.com/bradleywakefield/geomix-paper.git
-cd geomix-paper
-conda env create -f environment.yml
-conda activate geomix
-```
+> **Note:** `renv.lock` is a placeholder until the full dependency list is
+> finalised. Run `renv::init()` followed by `renv::snapshot()` to populate it
+> once the package dependencies are known.
 
 ---
 
@@ -91,37 +87,36 @@ Synthetic data for the simulation studies is generated programmatically by the s
 ### Simulation Studies
 
 ```bash
-python scripts/simulation_study.py
+Rscript scripts/simulation_study.R
 ```
 
 ### IJmuiden Ver Application
 
 ```bash
-python scripts/ijmuiden_ver.py
+Rscript scripts/ijmuiden_ver.R
 ```
 
 ### Generating All Figures
 
 ```bash
-python scripts/make_figures.py
+Rscript scripts/make_figures.R
 ```
 
 Generated figures will be written to `figures/`.
-
-### Jupyter Notebooks
-
-Interactive notebooks are provided in `notebooks/` and can be launched with:
-
-```bash
-jupyter lab
-```
 
 ---
 
 ## Running Tests
 
+```r
+# In R:
+devtools::test()
+```
+
+or from the command line:
+
 ```bash
-pytest tests/
+Rscript -e "devtools::test()"
 ```
 
 ---

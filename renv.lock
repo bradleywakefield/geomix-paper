@@ -1,0 +1,14 @@
+{
+  "R": {
+    "Version": "TODO",
+    "Repositories": [
+      {
+        "Name": "CRAN",
+        "URL": "https://cloud.r-project.org"
+      }
+    ]
+  },
+  "Packages": {
+    "TODO": "Run `renv::init()` followed by `renv::snapshot()` to populate this file."
+  }
+}

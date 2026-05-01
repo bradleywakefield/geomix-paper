@@ -8,8 +8,8 @@ Please open a [GitHub issue](https://github.com/bradleywakefield/geomix-paper/is
 
 - A clear, descriptive title.
 - Steps to reproduce the issue.
-- The Python version and relevant package versions (`pip freeze`).
-- The full error traceback, if applicable.
+- The R version and relevant package versions (output of `sessionInfo()`).
+- The full error message and traceback, if applicable.
 
 ## Suggesting Enhancements
 
@@ -25,25 +25,26 @@ Open a GitHub issue describing:
    git checkout -b feature/my-feature
    ```
 
-2. **Install** the development dependencies:
-   ```bash
-   pip install -r requirements.txt
+2. **Install** the development dependencies using renv:
+   ```r
+   install.packages("renv")
+   renv::restore()
    ```
 
 3. **Make your changes**, keeping commits focused and atomic.
 
 4. **Run the tests** to ensure nothing is broken:
-   ```bash
-   pytest tests/
+   ```r
+   devtools::test()
    ```
 
 5. **Open a pull request** against the `main` branch with a clear description of what was changed and why.
 
 ## Code Style
 
-- Follow [PEP 8](https://peps.python.org/pep-0008/) for Python code.
-- Use [ruff](https://docs.astral.sh/ruff/) for linting: `ruff check src/ scripts/ tests/`.
-- Add docstrings to public functions and classes (NumPy docstring style preferred).
+- Follow the [tidyverse style guide](https://style.tidyverse.org/) for R code.
+- Use [lintr](https://lintr.r-lib.org/) for linting: `lintr::lint_package()`.
+- Add roxygen2 documentation to exported functions.
 
 ## Reproducibility
 
