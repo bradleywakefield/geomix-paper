@@ -1,6 +1,6 @@
 {
   "R": {
-    "Version": "TODO",
+    "Version": "4.3.0",
     "Repositories": [
       {
         "Name": "CRAN",
@@ -8,7 +8,5 @@
       }
     ]
   },
-  "Packages": {
-    "TODO": "Run `renv::init()` followed by `renv::snapshot()` to populate this file."
-  }
+  "Packages": {}
 }

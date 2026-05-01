@@ -2,8 +2,7 @@ Package: geomix
 Title: GeoMix: A Bayesian Framework for Stratigraphic and Geotechnical Inference
 Version: 0.1.0
 Authors@R:
-    person("Bradley", "Wakefield", role = c("aut", "cre"),
-           comment = c(ORCID = "TODO"))
+    person("Bradley", "Wakefield", role = c("aut", "cre"))
 Description: Reproducible research code for the GeoMix paper. GeoMix is a
     fully Bayesian hierarchical framework for jointly inferring geological
     stratigraphy and geotechnical properties from seismic and geotechnical data.
