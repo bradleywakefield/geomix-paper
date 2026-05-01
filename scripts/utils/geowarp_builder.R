@@ -1,5 +1,27 @@
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 1 Preliminaries ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 library(geowarp)
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 2 GeoWarp competing model factory ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 2.1 model_factory: build a GeoWarp model specification ----
+#
+# Arguments:
+#   df            - data frame with x, y, d columns
+#   variable_name - name of the response variable
+#   m_formula     - mean model formula (default ~1)
+#   mbasis        - use vertical basis functions in mean model
+#   vbasis        - use vertical basis functions in variance model
+#   vert_warp     - use Bernstein AWU vertical warping (TRUE) or linear (FALSE)
+#   geom_warp     - use geometric warping unit
+#   warping_mapping - integer vector mapping axes to AWUs
+#   covariance    - covariance function name
+#   dev_model     - deviation model type: "full", "vert", or "white" (LM)
+#   min_depth / max_depth - vertical domain bounds
 model_factory <- function(df, variable_name,
                           m_formula = "~1",
                           mbasis = T,
@@ -10,6 +32,8 @@ model_factory <- function(df, variable_name,
                           covariance = c("matern15"),
                           dev_model = "full",
                           min_depth = 0, max_depth = 21){
+
+  ## 2.2 Helper: horizontal domain range ----
   get_horizontal_domains <- function(df) {
     if ('horizontal' %in% colnames(df)) {
       range(df$horizontal)
@@ -17,6 +41,8 @@ model_factory <- function(df, variable_name,
       list(range(df$x), range(df$y))
     }
   }
+
+  ## 2.3 Vertical warping unit ----
   if(vert_warp){
     shared_vertical_warping <- geowarp_bernstein_awu(
       order = (max_depth-min_depth),
@@ -27,12 +53,15 @@ model_factory <- function(df, variable_name,
       prior = list(type = 'uniform', shape = 1.01, rate = 0.01, lower = 0, upper = 1000)
     )
   }
+
+  ## 2.4 Geometric warping unit ----
   if(geom_warp){
     geometric_warp <- geowarp_geometric_warping_unit(prior_shape = 4)
   }else{
     geometric_warp <- NULL
   }
 
+  ## 2.5 Deviation process ----
   if(dev_model == "full"){
     deviation_process <- geowarp_deviation_model(
       axial_warping_units = c(
@@ -72,6 +101,7 @@ model_factory <- function(df, variable_name,
     )
   }
 
+  ## 2.6 Assemble and return model object ----
   geowarp_model(
     variable = variable_name,
     horizontal_coordinates = c('x', 'y'),

@@ -1,3 +1,8 @@
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 1 Preliminaries ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 1.1 Libraries ----
 library(patchwork)
 library(cowplot)
 library(scoringRules)
@@ -8,6 +13,8 @@ library(scales)
 library(grid)
 
 select <- dplyr::select
+
+## 1.2 Shared helpers and colour palette ----
 box_cox <- function(y,lambda = 0.6) (y ^ lambda - 1) / lambda
 inv_box_cox <- function(y, lambda=0.6) (y * lambda + 1)^(1 / lambda)
 get_mode <- function(x) names(sort(table(x), decreasing = TRUE))[1]
@@ -22,6 +29,11 @@ get_leg <- function(p) {
   )
 }
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 2 Scoring functions ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 2.1 Block diagonal scoring rule (DSS at lag p) ----
 dss_p_score <- function(observed, posterior_samples, p) {
   sapply(seq_len(floor(length(observed) / p)), function(i) {
     indices <- p * (i - 1) + seq_len(p)
@@ -37,6 +49,12 @@ dss_p_score <- function(observed, posterior_samples, p) {
     )
   })
 }
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3 IJV application evaluation ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 3.1 Evaluate cone tip resistance predictions (Z2) ----
 eval_prediction_Z2 <- function(name, path = "results/application/"){
   require(scoringRules)
   pred_df <- readRDS(paste0(path,"predictions/pred_df.rds"))
@@ -78,6 +96,8 @@ eval_prediction_Z2 <- function(name, path = "results/application/"){
 
   return(list(stats = stats,pred_df = data.frame(model=name,pred_df)))
 }
+
+## 3.2 Evaluate stratigraphy classification probabilities (Z1) ----
 eval_probability_Z1 <- function(name, path = "results/application/"){
   require(yardstick)
   full_df <- readRDS(paste0(path,"predictions/full_df.rds"))
@@ -127,6 +147,12 @@ eval_probability_Z1 <- function(name, path = "results/application/"){
 
   return(list(stats = stats,prob_df = Y1_prob, boundaries = boundaries))
 }
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 4 Simulation study evaluation ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 4.1 Evaluate latent geotechnical predictions (Y2) ----
 eval_prediction_Y2 <- function(name, path = "results/simulation/"){
   require(scoringRules)
   pred_df <- readRDS(paste0(path,"predictions/pred_df.rds"))
@@ -162,6 +188,8 @@ eval_prediction_Y2 <- function(name, path = "results/simulation/"){
 
   return(list(stats = stats,pred_df = data.frame(model=name,pred_df)))
 }
+
+## 4.2 Evaluate latent stratigraphy classification (Y1) ----
 eval_probability_Y1 <- function(name, path = "results/simulation/"){
   require(yardstick)
   train_df <- readRDS(paste0(path,"predictions/data.rds")) %>%
@@ -200,7 +228,6 @@ eval_probability_Y1 <- function(name, path = "results/simulation/"){
                            loss = mn_log_loss(filter(Y1_prob,id=="test"), Y1,paste0("X",1:K))$.estimate,
                            auc = roc_auc(filter(Y1_prob,id=="test"), Y1,paste0("X",1:K))$.estimate)
 
-
   boundaries <- Y1_prob %>%
     select(x,y,d,Y1hat,Y1,Z1) %>%
     pivot_longer(!c(x,y,d), names_to = "bound", values_to = "class") %>%
@@ -208,10 +235,11 @@ eval_probability_Y1 <- function(name, path = "results/simulation/"){
     summarise(ldepth = min(d), udepth = max(d)) %>%
     left_join(distinct(df,x,y))
 
-
   stats <- mutate(bind_rows(stats_train,stats_test,stats_all),Model = name,.before =everything())
   return(list(stats = stats,prob_df = Y1_prob,boundaries=boundaries))
 }
+
+## 4.3 Ground model (Z1) as baseline classifier ----
 compute_Z1 <- function(path = "results/simulation/"){
   require(yardstick)
   train_df <- readRDS(paste0(path,"predictions/data.rds")) %>%

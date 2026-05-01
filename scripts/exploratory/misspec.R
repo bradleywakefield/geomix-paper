@@ -1,11 +1,26 @@
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 1 Preliminaries ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 1.1 Libraries and helpers ----
 library(patchwork)
 library(slider)
 library(ggplot2)
+library(tidyverse)
 select <- dplyr::select
 box_cox <- function(y,lambda = 0.6) (y ^ lambda - 1) / lambda
 inv_box_cox <- function(y, lambda=0.6) (y * lambda + 1)^(1 / lambda)
+
+colours <-c("gold","darkorange3","gray30", "forestgreen","darkblue","maroon", "red4", "dodgerblue4")
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 2 Simulate misspecification data ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 2.1 Load inputs ----
 synthetic_list <- readRDS("data/simulation/synthetic_data.rds")
 
+## 2.2 Matern-3/2 simulation function ----
 sample_matern32_vec <- function(depths, mu, sigma2, ell, nugget = 0) {
   D <- as.matrix(dist(depths))
   sqrt3 <- sqrt(3)
@@ -15,6 +30,8 @@ sample_matern32_vec <- function(depths, mu, sigma2, ell, nugget = 0) {
 
   drop(chol(K) %*% rnorm(NROW(depths))) + mu
 }
+
+## 2.3 Generate CPT profile with misspecified stratigraphy ----
 set.seed(1234)
 data_base <- read_csv("data/application/misspec_cpt.csv") %>%
   left_join(data.frame(Y1 = 1:8, a0 = synthetic_list$alpha[,1], a1 = synthetic_list$alpha[,2],
@@ -29,7 +46,11 @@ data_base <- read_csv("data/application/misspec_cpt.csv") %>%
   select(d,Y1,Z1,Y2,Z2) %>%
   mutate(Y1 = factor(Y1,levels = 1:8),Z1 = factor(Z1,levels = 1:8))
 
-# Z1 boundary (blue, shifted)
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3 Boundaries and annotations ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 3.1 Stratigraphy boundary locations ----
 bnd_z1 <- data_base %>%
   filter(Z1!=1) %>%
   group_by(Z1) %>%
@@ -42,11 +63,9 @@ bnd_y1 <-  data_base %>%
   mutate(id = row_number())
 
 delta <- 0.1/2
-
-colours <-c("gold","darkorange3","gray30", "forestgreen","darkblue","maroon", "red4", "dodgerblue4")
-
 bar_locs <- c(90,115,120,145)
 
+## 3.2 Text annotations for misspecification examples ----
 ann1 <- filter(left_join(select(bnd_z1,Z1,d,ld,ud,id),select(bnd_y1,Y1,d)),is.na(Y1)) %>%
   mutate(label = c("→ prematurely  \ndetected boundary","→ failed to detect\nboundary until later")) %>%
   rename(class = Z1) %>%
@@ -55,6 +74,10 @@ ann1 <- filter(left_join(select(bnd_z1,Z1,d,ld,ud,id),select(bnd_y1,Y1,d)),is.na
       rename(class = Y1) %>% mutate(label = c("→ omitted a stratum","→ omitted another\nstratum") ,
                                     d = (ld+ud)/2 + c(0,1))
   ) %>% select(!Y1)
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 4 Plot 1: Full misspec figure ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 mis <- ggplot(data_base) +
   geom_rect(xmin = 0.5, xmax = 0.6,ymin = 0.1, ymax = 0.2,
@@ -118,10 +141,12 @@ mis <- ggplot(data_base) +
     col = "",
     title = ""
   )
-mis
-ggsave("results/figures/misspec.pdf",mis,width = 4.6,height = 3.6, device = cairo_pdf)
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 5 Plot 2: Simplified Y1/Z1 panels ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+## 5.1 Y1 (true stratigraphy) panel ----
 mis2 <- ggplot(data_base) +
   geom_rect(xmin = 0.5, xmax = 0.6,ymin = 0.1, ymax = 0.2,
             aes(fill = factor(3,levels =1:8))) +
@@ -174,6 +199,7 @@ mis2 <- ggplot(data_base) +
     col = "",
     title = "")
 
+## 5.2 Z1 (ground model stratigraphy) panel ----
 mis3 <- ggplot(data_base) +
   geom_rect(xmin = -Inf, xmax = Inf,ymin = -Inf, ymax = box_cox(14.5),
             fill = 'white') +
@@ -214,7 +240,13 @@ mis3 <- ggplot(data_base) +
   ) +
   labs(y = "")
 
+## 5.3 Combine panels ----
 mis4 <-  mis2+mis3+
   plot_layout(widths = c(180, 80))
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 6 Save figures ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ggsave("results/figures/misspec.pdf",mis,width = 4.6,height = 3.6, device = cairo_pdf)
 ggsave("results/figures/misspec2.pdf",mis4,width = 4.6,height = 4, device = cairo_pdf)

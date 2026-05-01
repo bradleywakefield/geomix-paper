@@ -1,3 +1,8 @@
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 1 Preliminaries ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 1.1 Libraries ----
 library(sf)
 library(ggplot2)
 library(rnaturalearth)
@@ -5,10 +10,16 @@ library(rnaturalearthdata)
 library(tidyverse)
 library(patchwork)
 library(concaveman)
+library(grid)
 
 # Requires in memory: full_df, geomix_setup
 # Run 01_process_data.R and 02_fit_models.R first
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 2 Build IJV study area outline ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 2.1 Spatial point data ----
 pts <- full_df %>%
   group_by(x,y) %>%
   mutate(Z2flag = if_else(sum(is.na(Z2))==n(),0,1),
@@ -22,7 +33,7 @@ pts <- full_df %>%
 
   )
 
-# IJV offshore CRS -> WGS84
+## 2.2 Project to WGS84 and build concave hull ----
 ijv_sf  <- st_as_sf(pts, coords = c("x","y"), crs = 25831)
 ijv_ll  <- st_transform(ijv_sf, 4326)
 coords <- st_coordinates(ijv_ll)[, 1:2, drop = FALSE]
@@ -33,7 +44,10 @@ ijv_outline <- st_sfc(
 )
 ijv_outline <- st_buffer(ijv_outline,50)
 
-# Netherlands outline
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 3 Country basemaps ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 nl <- ne_countries(country = "Netherlands", scale = 10L, returnclass = "sf") |>
   st_transform(4326)
 bel <- ne_countries(country = "Belgium", scale = 10L, returnclass = "sf") |>
@@ -41,7 +55,7 @@ bel <- ne_countries(country = "Belgium", scale = 10L, returnclass = "sf") |>
 ger <- ne_countries(country = "Germany", scale = 10L, returnclass = "sf") |>
   st_transform(4326)
 
-# label anchor points
+## 3.1 Label anchor points ----
 nl_cent <- st_coordinates(st_centroid(st_union(nl)))
 lab_nl  <- data.frame(lon = nl_cent[1], lat = nl_cent[2], txt = "Netherlands")
 
@@ -52,7 +66,12 @@ lab_ijv  <- data.frame(lon = ijv_cx, lat = ijv_bb["ymin"] - ijv_off,
                        txt = "IJmuiden Ver\nWind Farm Zone")
 
 sea_col   <- "#D9ECF5"; land_col <- "#3C6287"; ijv_col <- "#E67E22"
-library(grid)
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 4 Seismic line layout ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+synth_df <- readRDS("data/application/seismic_cdp.rds")
 
 lines_map <- full_df %>%
   dplyr::filter(d <= 50,xid > 29, xid < 46) %>%
@@ -65,8 +84,6 @@ lines_map <- full_df %>%
   summarise(geometry = st_union(geometry)) %>%
   st_cast("LINESTRING")
 
-synth_df <- readRDS("data/application/seismic_cdp.rds")
-
 all_lines_map <- synth_df %>%
   mutate(easting = easting, northing = northing) %>%
   distinct(id,easting,northing) %>%
@@ -76,6 +93,10 @@ all_lines_map <- synth_df %>%
   group_by(id) %>%
   summarise(geometry = st_union(geometry)) %>%
   st_cast("LINESTRING")
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 5 Build map-version spatial grid (WGS84) ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 cell_size <- 350
 locs <- readRDS("data/processed/locs.rds")
@@ -97,9 +118,13 @@ cell_grid$z2 <- cell_grid$loc_id %in% drop_na(geomix_setup$df)$loc_id +
   cell_grid$loc_id %in% drop_na(full_df)$loc_id
 cell_grid$z2 <- factor(cell_grid$z2,labels = c("No CPT data","Test CPT data","Train CPT data"))
 
-# Save map version of cell grid (WGS84, with 'valid' and 'z2' columns for visualisation)
-saveRDS(cell_grid,"data/processed/cell_grid_map.rds")
+saveRDS(cell_grid,'data/processed/cell_grid_map.rds')
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 6 Define cross-section lines ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## 6.1 Helper: bottom y-index for a given x ----
 compute_bottom_y <- function(x0){
   cell_grid %>%
     filter(valid) %>%
@@ -107,7 +132,7 @@ compute_bottom_y <- function(x0){
     pull(yid) %>% min()
 }
 
-
+## 6.2 Build vertical and diagonal line grids ----
 vert_endpoints <- c(30,35,40,45)
 diag_endpoints <- c(-8,0,8,16,24,32,48,56,64,72,80,88)
 line_grid <- lapply(1:4,function(i) mutate(filter(cell_grid,valid,xid==vert_endpoints[i]),line=i)) %>%
@@ -127,9 +152,10 @@ for (i in 1:length(diag_endpoints)){
 line_df <- st_set_geometry(select(line_grid,line,loc_id,xid,yid),value=NULL)
 line_grid <- st_as_sf(line_grid)
 
-# Save line_df: used by 04_application_results.R to define cross-section slices
+## 6.3 Save line definitions ----
 saveRDS(line_df,"data/processed/line_df.rds")
 
+## 6.4 Line labels and sf objects for plotting ----
 line_label <- line_df %>%
   group_by(line) %>%
   summarise(mxid = max(xid), myid = max(yid[which(xid == mxid)])) %>%
@@ -146,7 +172,11 @@ line_sf <- left_join(line_df,distinct(full_df,loc_id,x,y)) %>%
   summarise(geometry = st_combine(geometry)) %>%
   st_cast("LINESTRING")
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 7 Map figures ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+## 7.1 Overview map: Netherlands + IJV location (mp1) ----
 mp1 <- ggplot() +
   theme_void(base_size = 8) +
   theme(panel.background = element_rect(fill = sea_col, color = NA),
@@ -166,6 +196,7 @@ mp1 <- ggplot() +
            size = 1.5, color = "#1f2e40",vjust = 0) +
   coord_sf(xlim = c(2.6, 7.6), ylim = c(50.6, 54.0), expand = FALSE)
 
+## 7.2 CPT locations map (mp2) ----
 bb_sub <- st_bbox(c(
   xmin = 3.418,
   xmax = 3.437,
@@ -197,6 +228,7 @@ mp2 <- ggplot() +
   scale_shape_manual(values = c(16,25))+
   labs(col = "CPT Locations", shape = "")
 
+## 7.3 Seismic lines map (mp3) ----
 mp3 <- ggplot() +
   theme_void() +
   theme(
@@ -221,6 +253,7 @@ mp3 <- ggplot() +
   guides(color = guide_legend(override.aes = list(linewidth = 1.2)))+
   labs(col = "Seismic Traces", shape = "")
 
+## 7.4 Inset plots ----
 lines_sub <- st_crop(all_lines_map, bb_sub)
 grid_sub <- st_crop(filter(cell_grid,valid),bb_sub)
 points_sub <- st_crop(filter(ijv_ll,Z2flag =="Cone Penetrometer Test Site"),bb_sub)
@@ -250,6 +283,10 @@ mp3p1 <- ggplot() +
   annotate("rect",xmin = bb_sub['xmin'], xmax = bb_sub['xmax'], ymin = bb_sub['ymin'],
            ymax = bb_sub['ymax'],fill =sea_col,col='yellow',linewidth=0.5)+
   geom_sf(data = lines_sub, col='#E67E22',size=0.1,show.legend = F)
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 8 Save figures ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 dir.create("results/figures", recursive = TRUE, showWarnings = FALSE)
 ggsave("results/figures/map1.pdf",mp1,  width = 4.78/3, height = 2,device = cairo_pdf)
