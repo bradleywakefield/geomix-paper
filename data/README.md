@@ -18,7 +18,7 @@ repository. To reproduce the real-data results, please follow the steps below:
 2. Place the raw data files in `data/raw/`.
 3. Run the pre-processing script:
    ```bash
-   python scripts/preprocess_ijmuiden.py
+   # TODO: add the command/script you use to preprocess the IJmuiden data
    ```
    This will write the prepared files to `data/processed/`.
 
@@ -28,7 +28,7 @@ Synthetic datasets used in the simulation studies are generated programmatically
 and are **not** stored in this directory. Run:
 
 ```bash
-python scripts/simulation_study.py
+# TODO: add the command/script you use to generate simulation data
 ```
 
 to reproduce the simulation results from scratch.
