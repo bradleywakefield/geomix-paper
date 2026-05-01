@@ -1,7 +1,8 @@
 # Data files — excluded until data permissions are resolved
 data/**
 !data/README.md
-
+paper/
+latexmkrc
 # MCMC results and model outputs — large files, not tracked
 results/simulation/
 results/application/
@@ -14,3 +15,4 @@ results/application/
 
 # macOS
 .DS_Store
+.claude/worktrees/serene-bassi-fd076a/
