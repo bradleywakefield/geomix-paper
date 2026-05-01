@@ -1,0 +1,16 @@
+# Data files — excluded until data permissions are resolved
+data/**
+!data/README.md
+
+# MCMC results and model outputs — large files, not tracked
+results/simulation/
+results/application/
+
+# R session artefacts
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# macOS
+.DS_Store
