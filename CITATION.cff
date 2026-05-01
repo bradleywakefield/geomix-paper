@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "GeoMix: A Bayesian Framework for Stratigraphic and Geotechnical Inference"
+abstract: >
+  GeoMix is a fully Bayesian hierarchical framework for jointly inferring
+  geological stratigraphy and geotechnical properties from seismic and
+  geotechnical data. It uses a Potts Markov random field to represent spatially
+  coherent geology, class-specific Gaussian processes for geotechnical
+  properties, and a grouped Vecchia approximation for scalable inference.
+authors:
+  - family-names: Wakefield
+    given-names: Bradley
+repository-code: "https://github.com/bradleywakefield/geomix-paper"
+license: MIT
+date-released: "2025-01-01"
+keywords:
+  - Bayesian inference
+  - stratigraphy
+  - geotechnical
+  - Gaussian process
+  - Potts model
+  - Markov random field
+  - Vecchia approximation
+  - offshore wind
+  - seismic interpretation
+preferred-citation:
+  type: article
+  title: "GeoMix: A Bayesian Framework for Stratigraphic and Geotechnical Inference"
+  authors:
+    - family-names: Wakefield
+      given-names: Bradley
+  year: 2025
+  url: "https://github.com/bradleywakefield/geomix-paper"
