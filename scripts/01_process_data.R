@@ -160,4 +160,4 @@ message("Saved data/processed/data3D.RData")
 
 # Build hexagonal grouping lattice (saves data/processed/points_grid.rds)
 # Requires geomix_setup from 02_fit_models.R - run after model setup if needed
-# source("scripts/utils/group_lattice.R")
+# source("scripts/utils/hex_grouping.R")

@@ -14,7 +14,13 @@
 #           Outputs: data/processed/data3D.RData, data/cell_grid.rds, data/locs.rds
 #
 #   Step 2: Fit models and generate all paper results
-#           Includes simulation study (Section X) and IJV wind farm application (Section Y)
+#           Includes simulation study and IJV wind farm application
+#           Internally runs:
+#             Step 3 - simulation study figures (03_simulation_results.R)
+#             Step 4 - IJV application model fitting
+#             Step 5 - study area map figures (05_map_figures.R)
+#                      saves data/line_df.rds and data/cell_grid_map.rds
+#             Step 6 - IJV application results figures (04_application_results.R)
 #           Outputs: results/simulation/, results/application/, results/figures/
 #
 # RUNTIME:
@@ -22,10 +28,9 @@
 #   run on a multi-core server (~50 cores). The confirm_run() prompts in
 #   02_fit_models.R allow you to skip MCMC sampling and load pre-saved results.
 #
-# OPTIONAL SCRIPTS (run independently after Step 2):
-#   scripts/exploratory/eda.R           - Map figures (requires geomix_setup in memory)
-#   scripts/exploratory/misspec.R       - Misspecification illustration figure
-#   scripts/exploratory/model_plot.R    - Additional cross-section diagnostics
+# OPTIONAL SCRIPTS (run independently for additional diagnostics):
+#   scripts/exploratory/cross_section_plots.R  - Additional cross-section diagnostics
+#   scripts/exploratory/misspec.R              - Misspecification illustration figure
 
 # --- Install geomix if needed ---
 if (!requireNamespace("geomix", quietly = TRUE)) {

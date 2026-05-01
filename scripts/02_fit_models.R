@@ -256,7 +256,7 @@ saveRDS(pred_LGFM, file.path(path,"predictions","LGFM_predictions.rds"))
 saveRDS(merged_params_LGFM, file.path(path,"predictions","LGFM_params.rds"))
 
 ## 2.7 Run competing models ----
-source('scripts/utils/run_comparisons.R')
+source('scripts/utils/fit_competing_models.R')
 run_comparisons(path, depth_interval = c(0,21))
 
 ## 2.8 Compute results ----
@@ -621,8 +621,11 @@ saveRDS(pred_LGFM, file.path(path,"predictions","LGFM_predictions.rds"))
 saveRDS(merged_params_LGFM, file.path(path,"predictions","LGFM_params.rds"))
 
 ## 3.8 Run competing models ----
-source('scripts/utils/run_comparisons.R')
+source('scripts/utils/fit_competing_models.R')
 run_comparisons(path, depth_interval = c(24,50))
 
-## 3.9 Compute results ----
+## 3.9 Map figures (saves data/line_df.rds, data/cell_grid_map.rds) ----
+source('scripts/05_map_figures.R')
+
+## 3.10 Compute results ----
 source('scripts/04_application_results.R')

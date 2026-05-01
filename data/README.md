@@ -32,7 +32,7 @@ Running `scripts/01_process_data.R` creates:
 | `data/processed/data3D.RData` | Processed 3D dataset for the IJV application: `data`, `full_df`, `test_locs`, `cpt_locs`, `dims`, `K` |
 | `data/processed/points_grid.rds` | Hexagonal grouping lattice (created by `scripts/utils/group_lattice.R` after model setup) |
 
-Running `scripts/exploratory/eda.R` additionally creates:
+Running `scripts/02_fit_models.R` (via `scripts/05_map_figures.R`) additionally creates:
 
 | File | Description |
 |------|-------------|
