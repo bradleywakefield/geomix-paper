@@ -227,8 +227,8 @@ geomix_setup$df <- left_join(
 )
 
 ## 4.2 Setup spatial gridding ----
-cell_grid <- readRDS('data/cell_grid.rds')
-line_df <- readRDS("data/line_df.rds")
+cell_grid <- readRDS('data/processed/cell_grid.rds')
+line_df <- readRDS("data/processed/line_df.rds")
 
 # Compute centred coordinates for plotting
 centred_locations <- distinct(geomix_setup$df,loc_id,x,y) %>%

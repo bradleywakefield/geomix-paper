@@ -163,4 +163,4 @@ generate_geomix_synthetic <- function(params,nd = 20, nx = 20, ny = 20,
   ))
 }
 simulatedK3 <- generate_geomix_synthetic(params=params3, prop_obs = 0.2)
-saveRDS(select(simulatedK3$data,ID,d,x,y,locID,Z1,Z2),'data/offshore.rds')
+saveRDS(select(simulatedK3$data,ID,d,x,y,locID,Z1,Z2),'data/simulation/offshore.rds')

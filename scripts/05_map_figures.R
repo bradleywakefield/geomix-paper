@@ -65,7 +65,7 @@ lines_map <- full_df %>%
   summarise(geometry = st_union(geometry)) %>%
   st_cast("LINESTRING")
 
-synth_df <- readRDS("data/geophys/synth_df.rds")
+synth_df <- readRDS("data/application/seismic_cdp.rds")
 
 all_lines_map <- synth_df %>%
   mutate(easting = easting, northing = northing) %>%
@@ -78,7 +78,7 @@ all_lines_map <- synth_df %>%
   st_cast("LINESTRING")
 
 cell_size <- 350
-locs <- readRDS("data/locs.rds")
+locs <- readRDS("data/processed/locs.rds")
 locs$x <- locs$x/100; locs$y <- locs$y/100
 loc_sf <- st_as_sf(locs,coords=c("x","y"),crs = 25831)
 cell_grid <- st_make_grid(loc_sf,
@@ -98,7 +98,7 @@ cell_grid$z2 <- cell_grid$loc_id %in% drop_na(geomix_setup$df)$loc_id +
 cell_grid$z2 <- factor(cell_grid$z2,labels = c("No CPT data","Test CPT data","Train CPT data"))
 
 # Save map version of cell grid (WGS84, with 'valid' and 'z2' columns for visualisation)
-saveRDS(cell_grid,'data/cell_grid_map.rds')
+saveRDS(cell_grid,"data/processed/cell_grid_map.rds")
 
 compute_bottom_y <- function(x0){
   cell_grid %>%
@@ -128,7 +128,7 @@ line_df <- st_set_geometry(select(line_grid,line,loc_id,xid,yid),value=NULL)
 line_grid <- st_as_sf(line_grid)
 
 # Save line_df: used by 04_application_results.R to define cross-section slices
-saveRDS(line_df,'data/line_df.rds')
+saveRDS(line_df,"data/processed/line_df.rds")
 
 line_label <- line_df %>%
   group_by(line) %>%

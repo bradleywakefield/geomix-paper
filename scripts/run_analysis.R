@@ -6,12 +6,12 @@
 #    Geotechnical and Geophysical Data"
 #
 # PREREQUISITES:
-#   Data files must be placed in data/ and data/geophys/ before running.
+#   Data files must be placed in data/application/ and data/simulation/ before running.
 #   See data/README.md for the full list of required files.
 #
 # WORKFLOW:
 #   Step 1: Process raw CPT and geophysics data
-#           Outputs: data/processed/data3D.RData, data/cell_grid.rds, data/locs.rds
+#           Outputs: data/processed/data3D.RData, data/processed/cell_grid.rds, data/processed/locs.rds
 #
 #   Step 2: Fit models and generate all paper results
 #           Includes simulation study and IJV wind farm application
@@ -19,7 +19,7 @@
 #             Step 3 - simulation study figures (03_simulation_results.R)
 #             Step 4 - IJV application model fitting
 #             Step 5 - study area map figures (05_map_figures.R)
-#                      saves data/line_df.rds and data/cell_grid_map.rds
+#                      saves data/processed/line_df.rds and data/processed/cell_grid_map.rds
 #             Step 6 - IJV application results figures (04_application_results.R)
 #           Outputs: results/simulation/, results/application/, results/figures/
 #
