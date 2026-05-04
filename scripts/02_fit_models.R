@@ -335,8 +335,7 @@ run_chains(geomix_setup,
 ## 3.3 Process samples ----
 geomix_setup <- readRDS(file.path(path,"GeoMix_1/geomix_setup.rds"))
 
-samples_post <- load_mcmc_samples(path, index = 1:5) %>%
-  map(~.x[(nrow(.x)-4999):nrow(.x),]) %>%  # Remove burnin
+samples_post <- load_mcmc_samples(path, index = 5:32) %>%
   map(~.x[seq(10,nrow(.x),10),]) # Thin
 
 params_post <- extract_parameters(samples_post)
@@ -383,7 +382,7 @@ diagGP_df <- diag_df %>%
   mutate(class = as.integer(str_match(parameter, "\\[(\\d+)\\]")[,2]),
          type = str_remove(parameter,"\\[\\d+\\]"),
          type = factor(type,levels = GP_params),
-         parameter = factor(parameter,levels = c(paste0(rep(GPc_params,8),"[",rep(1:8,each = 5),"]"),GPnc_params)))
+         parameter = factor(parameter,levels = c(paste0(rep(GPc_params,8),"[",rep(1:8,each = 4),"]"),GPnc_params)))
 
 diagCM_df <- diag_df %>%
   filter(str_detect(parameter,"gamma")) %>%

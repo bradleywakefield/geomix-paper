@@ -52,7 +52,8 @@ default_theme <-   theme(legend.position = "bottom",
                          legend.key.size = unit(0.4,"cm"),
                          axis.text = element_text(size=8),
                          axis.title = element_text(size=10),
-                         legend.title = element_text(size=10),
+                         legend.title = element_text(size=10, margin = margin(0,0,0,0)),
+                         legend.box.margin = margin(t=-10),
                          plot.subtitle = element_text(size=8),
                          legend.title.align = 0.5,
                          legend.spacing.x  = unit(0.01, "cm"),
@@ -245,13 +246,12 @@ centred_locations <- distinct(geomix_setup$df,loc_id,x,y) %>%
 
 ## 4.3 Predicted qc (Z2) plot ----
 g0 <- geomix_setup$df %>%
-  dplyr::filter(d > 27, d < 48) %>%
-  filter(d == floor(d)) %>%
+  filter(d %in% seq(28, 46, 2)) %>%
   left_join(centred_locations) %>%
   ggplot() +
   geom_tile(aes(x = X, y = Y, fill = Z2_mean), width = 0.36, height = 0.36) +
-  facet_wrap(vars(factor(d, levels = seq(27.5, 48, 0.5),
-                         labels = paste0("", seq(27.5, 48, 0.5), "m BSL")))) +
+  facet_wrap(vars(factor(d, levels = seq(28, 46, 2),
+                         labels = paste0(seq(28, 46, 2), "m BSL"))), nrow = 2) +
   scale_fill_distiller(
     palette = "Spectral",
     label = ~round(inv_box_cox(.x)),
@@ -270,14 +270,13 @@ g0 <- geomix_setup$df %>%
 ## 4.4 Ground model (Z1) plot ----
 gap <- 0.35
 g1 <- geomix_setup$df %>%
-  dplyr::filter(d > 27, d < 48) %>%
+  filter(d %in% seq(28, 46, 2)) %>%
   left_join(centred_locations) %>%
   mutate(Y1 = factor(Z1,levels = 1:8, labels = c("GT1","GT2c","GT2","GT3","GT4","GT5","GT5*","GT6"))) %>%
-  filter(floor(d) == d) %>%
   ggplot() +
   geom_tile(aes(x = X, y = Y, fill = Y1), width = 0.36, height = 0.36) +
-  facet_wrap(vars(factor(d, levels = seq(27.5, 48, 0.5),
-                         labels = paste0("", seq(27.5, 48, 0.5), "m BSL")))) +
+  facet_wrap(vars(factor(d, levels = seq(28, 46, 2),
+                         labels = paste0(seq(28, 46, 2), "m BSL"))), nrow = 2) +
   theme_bw() + default_theme + theme(plot.subtitle = element_text(hjust = 1))+
   scale_fill_manual(values = colours)+
   coord_fixed()+
@@ -287,14 +286,13 @@ g1 <- geomix_setup$df %>%
 
 ## 4.5 MAP stratigraphy (Y1) plot ----
 g2 <- geomix_setup$df %>%
-  dplyr::filter(d > 27, d < 48) %>%
+  filter(d %in% seq(28, 46, 2)) %>%
   left_join(centred_locations) %>%
   mutate(Y1 = factor(Y1,levels = 1:8, labels = c("GT1","GT2c","GT2","GT3","GT4","GT5","GT5*","GT6"))) %>%
-  filter(floor(d) == d) %>%
   ggplot() +
   geom_tile(aes(x = X, y = Y, fill = Y1), width = 0.36, height = 0.36) +
-  facet_wrap(vars(factor(d, levels = seq(27.5, 48, 0.5),
-                         labels = paste0("", seq(27.5, 48, 0.5), "m BSL")))) +
+  facet_wrap(vars(factor(d, levels = seq(28, 46, 2),
+                         labels = paste0(seq(28, 46, 2), "m BSL"))), nrow = 2) +
   theme_bw() + default_theme +
   coord_fixed()+
   scale_fill_manual(values = colours)+
@@ -302,9 +300,9 @@ g2 <- geomix_setup$df %>%
        fill = expression(atop("Maximum A Posteriori","Geological Strata")))
 
 ## 4.6 Save  plots ----
-ggsave("results/figures/ijv-z1.pdf",g1,width = 4.78, height = 5)
-ggsave("results/figures/ijv-z2.pdf",g0,width = 4.78, height = 5)
-ggsave("results/figures/ijv-y1.pdf",g2,width = 4.78, height = 5)
+ggsave("results/figures/ijv-z1.pdf",g1,width = 4.78, height = 2.8)
+ggsave("results/figures/ijv-z2.pdf",g0,width = 4.78, height = 2.8)
+ggsave("results/figures/ijv-y1.pdf",g2,width = 4.78, height = 2.8)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 5. Cross-section plots  ----
