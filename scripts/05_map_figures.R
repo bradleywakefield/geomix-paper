@@ -121,41 +121,13 @@ cell_grid$z2 <- factor(cell_grid$z2,labels = c("No CPT data","Test CPT data","Tr
 saveRDS(cell_grid,'data/processed/cell_grid_map.rds')
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# 6 Define cross-section lines ----
+# 6 Cross-section line definitions ----
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-## 6.1 Helper: bottom y-index for a given x ----
-compute_bottom_y <- function(x0){
-  cell_grid %>%
-    filter(valid) %>%
-    filter(xid==30) %>%
-    pull(yid) %>% min()
-}
+## 6.1 Load line definitions (created in 01_process_data.R) ----
+line_df <- readRDS("data/processed/line_df.rds")
 
-## 6.2 Build vertical and diagonal line grids ----
-vert_endpoints <- c(30,35,40,45)
-diag_endpoints <- c(-8,0,8,16,24,32,48,56,64,72,80,88)
-line_grid <- lapply(1:4,function(i) mutate(filter(cell_grid,valid,xid==vert_endpoints[i]),line=i)) %>%
-  bind_rows()
-for (i in 1:length(diag_endpoints)){
-  x0 <-  diag_endpoints[i]
-  y0 <- compute_bottom_y(x0)
-  if(x0 > 40) x1 <- 0 else x1 <- (x0+87)
-  npts <- abs(x0-x1)
-
-  new_line_grid <-data.frame(xid=x0:x1,
-                             yid=y0:(y0+npts)) %>%
-    left_join(cell_grid) %>% filter(valid) %>%
-    mutate(line = 4+i)
-  line_grid <- bind_rows(line_grid,new_line_grid)
-}
-line_df <- st_set_geometry(select(line_grid,line,loc_id,xid,yid),value=NULL)
-line_grid <- st_as_sf(line_grid)
-
-## 6.3 Save line definitions ----
-saveRDS(line_df,"data/processed/line_df.rds")
-
-## 6.4 Line labels and sf objects for plotting ----
+## 6.2 Line labels and sf objects for plotting ----
 line_label <- line_df %>%
   group_by(line) %>%
   summarise(mxid = max(xid), myid = max(yid[which(xid == mxid)])) %>%

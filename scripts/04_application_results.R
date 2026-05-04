@@ -5,6 +5,7 @@
 library(sf)
 library(patchwork)
 library(tidyverse)
+library(ggtext)
 
 source('scripts/utils/prediction_scoring.R')
 load("data/processed/data3D.RData")
@@ -314,7 +315,7 @@ make_line_stack <- function(line_vals, show_legend = TRUE){
     legend.key.size = unit(0.25,"cm"),
     axis.text = element_text(size=6),
     axis.title = element_text(size=8),
-    legend.title = element_text(size=8),
+    legend.title = ggtext::element_markdown(size=8, margin = margin(-10,0,2,0), hjust=0.5, lineheight=1.1),
     legend.title.position = "top",
     legend.title.align = 0.5,
     legend.spacing.x  = unit(0.01, "cm"),
@@ -323,7 +324,8 @@ make_line_stack <- function(line_vals, show_legend = TRUE){
     strip.placement = "inside",
     strip.switch.pad.wrap = unit(0.0, "cm"),
     strip.text = element_text(size = 6, margin = margin(0,0,0,0)),
-    legend.text = element_text(size=6, margin = margin(0,0,0,1))
+    legend.text = element_text(size=6),
+    legend.margin = margin(0,0,0,0)
   )
 
   base_df <- line_df %>%
@@ -391,9 +393,8 @@ make_line_stack <- function(line_vals, show_legend = TRUE){
     ) +
     labs(
       x = "Depth (m) BSL",
-      y = if_else(show_legend, "Distance along line (km)", ""),
-      fill = expression(atop("Posterior Mean Estimate of",
-                             "Cone Tip Resistance " ~ q[c]))
+      y = if_else(show_legend, "", ""),
+      fill = "Posterior Mean Estimate of<br>Cone Tip Resistance q<sub>c</sub>"
     )
 
   # PANEL 2: POSTERIOR STANDARD DEVIATION qc
@@ -446,8 +447,7 @@ make_line_stack <- function(line_vals, show_legend = TRUE){
     labs(
       x = "",
       y = if_else(show_legend, "Distance along line (km)", ""),
-      fill = expression(atop("Posterior Standard Deviation of",
-                             paste("Transformed ", q[c])))
+      fill = "Posterior Standard Deviation<br>of Transformed q<sub>c</sub>"
     )
 
   # PANEL 3: MAP STRATIGRAPHY (Y1)
@@ -483,15 +483,17 @@ make_line_stack <- function(line_vals, show_legend = TRUE){
     coord_flip() +
     theme_bw() +
     default_theme +
+    theme(legend.key.spacing.x = unit(0, "pt"),
+          legend.box.margin = margin(b=10),
+          legend.text = element_text(size=6, margin = margin(l=0, r=2))) +
     scale_fill_manual(values = colours) +
     labs(
       x = "",
-      y = if_else(show_legend, "Distance along line (km)", ""),
-      fill = expression(atop("Maximum A Posteriori",
-                             "Geological Strata"))
+      y = if_else(show_legend, "", ""),
+      fill = "Maximum A Posteriori<br>Geological Strata"
     )
 
-  g6 <- g6p1 + g6p2 + g6p3
+  g6 <- g6p1 + g6p2 + g6p3 
   return(g6)
 }
 
@@ -505,6 +507,7 @@ g6nl <- make_line_stack(c(2,4),show_legend = F)
 g8 <- (g6nl / g7) + plot_layout(heights = c(1, 3))
 
 ## 5.4 Save plots ----
-ggsave("results/figures/ijv-cross.pdf",g8,width = 4.78, height = 6.8)
-ggsave("results/figures/ijv-crossA.pdf",g6,width = 4.78, height = 3.2)
-ggsave("results/figures/ijv-crossB.pdf",g7,width = 4.78, height = 6)
+ggsave("results/figures/ijv-cross.pdf",g8,width = 4.78, height = 6)
+ggsave("results/figures/ijv-crossA.pdf",g6,width = 4.78, height = 2.6)
+ggsave("results/figures/ijv-crossB.pdf",g7,width = 4.78, height = 5)
+
