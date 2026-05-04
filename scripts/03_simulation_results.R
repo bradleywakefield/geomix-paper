@@ -101,13 +101,13 @@ g1 <-
   theme(legend.position = "bottom",
         legend.key.size = unit(0.4,"cm"),
         legend.key.spacing = unit(0.05,"cm"),
-        plot.margin = margin(0, 0, 4, 2),
+        plot.margin = margin(0, 0, 0, 0),
         axis.title.x = element_blank(),
         axis.text.x = element_blank(), axis.ticks.x = element_blank())+
   guides(fill = guide_legend(nrow=2), alpha = "none")+
   facet_wrap(vars(facet),ncol = 1)+
   labs(x="",y="Depth (m)",
-       fill="Geological Strata")
+       fill="Geological\nStrata")
 
 ## 4.2 Plot latent, observed, and predicted geotechnical ----
 g2 <-  full_pred_df %>%
@@ -115,7 +115,7 @@ g2 <-  full_pred_df %>%
   pivot_longer(!c(x,y,d),names_to = c("facet")) %>%
   mutate(facet = factor(facet,levels = c("Y2","Z2","Y2hat"),
                         labels = c("Latent Geotechnical Property",
-                                   "Observed Geotechnical Measurements",
+                                   "Geotechnical Measurements",
                                    "Predicted Geotechnical Property"))) %>%
   drop_na() %>%
   ggplot()+
@@ -124,10 +124,10 @@ g2 <-  full_pred_df %>%
   scale_y_reverse(limits = c(-0.5,20))+theme_bw()+ default_theme+
   theme(legend.position = "bottom",legend.key.size = unit(0.5,"cm"),
         legend.key.spacing = unit(0.05,"cm"),
-        plot.margin = margin(0, 0, 4, 2),axis.title.x = element_blank(),
+        plot.margin = margin(0, 0, 0, 0),axis.title.x = element_blank(),
         axis.text.x = element_blank(), axis.ticks.x = element_blank())+
   facet_wrap(vars(facet),ncol = 1)+
-  labs(x="",y="Depth (m)",
+  labs(x="",y="",
        fill="Geotechnics")
 
 ## 4.3 Probability of MAP ----
@@ -135,13 +135,13 @@ g3 <-
   full_pred_df %>%
   ggplot()+
   geom_tile(aes(x = x, y = d, fill = Y1hat_prob),show.legend = T)+
-  scale_fill_distiller(palette = "Blues")+
+  scale_fill_distiller(palette = "Blues", breaks = c(0.6,0.8,1))+
   scale_y_reverse(limits = c(-0.5,20))+theme_bw()+default_theme+
   facet_wrap(vars("Probability of the MAP Strata"),ncol = 1)+
   theme(legend.position = "bottom", legend.key.size = unit(0.5,"cm"),
         legend.key.spacing = unit(0.05,"cm"))+
   labs(x="Distance along x axis",y="",
-       fill="MAP probability")
+       fill="MAP\nprobability")
 
 ## 4.4 Posterior standard deviation ----
 g4 <-  full_pred_df %>%
@@ -153,13 +153,22 @@ g4 <-  full_pred_df %>%
         legend.key.spacing = unit(0.05,"cm"))+
   facet_wrap(vars("Std Deviation of Predictions"),ncol = 1)+
   labs(x="Distance along x axis",y="",
-       fill="Standard deviation")
+       fill="Standard\ndeviation")
 
-## 4.5 Extract legends ----
-leg_strata <- get_leg(g1)   # strata legend
-leg_prop   <- get_leg(g2)   # geotechnical property legend
-leg_prob   <- get_leg(g3)   # probability legend
-leg_sd     <- get_leg(g4)   # sd legend
+## 4.5 Extract legends (vertical, for right-column layout) ----
+leg_theme <- theme(
+  legend.position       = "right",
+  legend.box            = "vertical",
+  legend.title          = element_text(hjust = 0.5, size = 8),
+  legend.title.position = "top",
+  legend.key.width      = unit(0.4, "cm")
+)
+get_leg_vert <- function(p) cowplot::get_legend(p + leg_theme)
+leg_strata <- get_leg_vert(g1 + guides(fill = guide_legend(ncol = 2, keywidth = unit(0.4, "cm"))))
+leg_prop   <- get_leg_vert(g2 + guides(fill = guide_colorbar(barwidth = unit(0.5, "cm"), barheight = unit(1.3, "cm"))))
+leg_prob   <- get_leg_vert(g3 + guides(fill = guide_colorbar(barwidth = unit(0.5, "cm"), barheight = unit(1.2, "cm"))) +
+                theme(legend.title = element_text(hjust = 0.5, size = 8, margin = margin(b = 4))))
+leg_sd     <- get_leg_vert(g4 + guides(fill = guide_colorbar(barwidth = unit(0.5, "cm"), barheight = unit(1.4, "cm"))))
 
 ## 4.6 Remove legends ----
 g1n <- g1 + theme(legend.position = "none")
@@ -174,21 +183,18 @@ p_leg_prob   <- wrap_elements(leg_prob)
 p_leg_sd     <- wrap_elements(leg_sd)
 
 ## 4.8  Make columns and assemble plots ----
-left_col  <- (g1n / g3n) + plot_layout(heights = c(4, 1))
-right_col <- (g2n / g4n) + plot_layout(heights = c(4, 1))
+left_col  <- ((g1n / g3n) + plot_layout(heights = c(4, 1)))
+right_col <- ((g2n / g4n) + plot_layout(heights = c(4, 1)))
+leg_col   <- (p_leg_strata / plot_spacer() / p_leg_prop / plot_spacer() / p_leg_prob / plot_spacer() / p_leg_sd) +
+  plot_layout(heights = c(0.95, 0.05, 0.95, 0.05, 0.95, 0.1, 0.95))
 
 ## 4.9  Final plot ----
 syn_cross <-
-  (left_col | right_col) /
-  ((p_leg_strata | plot_spacer() | p_leg_prob | plot_spacer() |
-      p_leg_prop   | plot_spacer() | p_leg_sd) +
-     plot_layout(widths = c(1, 0.1, 1, 0.15, 1, 0.15, 1)))+
-  plot_layout(
-    heights = c(12, 2)
-  )
+  ((left_col | right_col | plot_spacer() | leg_col) +
+     plot_layout(widths = c(5, 5, 0, 2)))
 
 ## 4.10  Save plot ----
-ggsave("results/figures/syn-cross.pdf",syn_cross,width=4.78,height=4.5,device=cairo_pdf)
+ggsave("results/figures/syn-cross.pdf",syn_cross,width=4.78,height=3.5,device=cairo_pdf)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 5 Plot 2 - Posterior samples.       ----
@@ -196,27 +202,31 @@ ggsave("results/figures/syn-cross.pdf",syn_cross,width=4.78,height=4.5,device=ca
 
 ## 5.1 Process posterior data sets ----
 GM_sampY2 <- cbind(pred_df,as.data.frame(GeoMix_predictions$samples)) %>%
+  filter(x== xex,y ==yex) %>%
   pivot_longer(starts_with("V"),names_prefix = "V",names_to = "Iter",values_to = "Y2hat")
 GM_sampY1 <- cbind(df,as.data.frame(t(GeoMix_params$samples$Y1))) %>%
-  pivot_longer(starts_with("V"),names_prefix = "V",names_to = "Iter",values_to = "Y1hat") %>%
-  filter(id == "test")
+  filter(x== xex,y ==yex,id == "test") %>%
+  pivot_longer(starts_with("V"),names_prefix = "V",names_to = "Iter",values_to = "Y1hat")
 GM_samp <- left_join(GM_sampY1,GM_sampY2)
 
 ## 5.2 Posterior sample plot ----
-syn_plot <- filter(GM_samp,x== xex,y ==yex) %>%
+syn_plot <- GM_samp %>%
+  filter(d %in% seq(1,20,2)) %>%
   ggplot()+
   geom_histogram(aes(x=Y2hat,fill=factor(Y1hat,levels = 1:8), y =after_stat(count)),alpha = 0.75, position = "stack")+
-  geom_vline(aes(xintercept = Y2,col = factor(Y1,levels = 1:8)), data = filter(pred_df,x== xex,y ==yex),size=1.5)+
+  geom_vline(aes(xintercept = Y2,col = factor(Y1,levels = 1:8)), data = filter(pred_df,x== xex,y ==yex,d %in% seq(1,20,2)),size=1.5)+
   facet_wrap(vars(factor(d,levels = 1:20, label = paste0("",1:20,"m Depth"))),ncol=5)+
   theme_bw()+
   guides(fill = guide_legend(nrow=1), col = guide_legend(nrow=1))+
   labs(x="Predicted Latent Cone Tip Resistance ",y="Stacked Frequency",
-       fill=expression("Geological Strata"*Y[1](bold(s))*" and "*Y[2](bold(s))*" (line)"),
-       col=expression("Geological Strata"*Y[1](bold(s))*" and "*Y[2](bold(s))*" (line)")) +
-  default_theme
+       fill=expression("Geological Strata "*Y[1](bold(s))*" and "*Y[2](bold(s))*" (line)"),
+       col=expression("Geological Strata "*Y[1](bold(s))*" and "*Y[2](bold(s))*" (line)")) +
+  default_theme+theme(legend.key.size = unit(0.4,"cm"), legend.position = c(0.5,-0.39),
+                      legend.title = element_text(hjust = 0.5, margin = margin(b = 0)),
+                      plot.margin = margin(0, 0, 30, 0))
 
 ## 5.3 Save plot ----
-ggsave("results/figures/syn-post.pdf",syn_plot,width=4.78,height=4.5,device=cairo_pdf)
+ggsave("results/figures/syn-post.pdf",syn_plot,width=4.78,height=2.3,device=cairo_pdf)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 6 Plot 3 - Parameter recovery ----
