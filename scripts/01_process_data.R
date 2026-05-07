@@ -230,12 +230,17 @@ message("Saved data/processed/line_df.rds")
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 rm(list = setdiff(ls(), c("data","lattice","dims","diagonals","K","full_df","test_locs","cpt_locs")))
+data$dID <- as.numeric(factor(data$d))
 
 dir.create("data/processed", recursive = TRUE, showWarnings = FALSE)
 save(data, full_df, test_locs, cpt_locs, dims, K,
      file = "data/processed/data3D.RData")
 message("Saved data/processed/data3D.RData")
 
-# Build hexagonal grouping lattice (saves data/processed/points_grid.rds)
-# Requires geomix_setup from 02_fit_models.R - run after model setup if needed
-# source("scripts/utils/hex_grouping.R")
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 9 Generate hexagonal grouping ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+lattice_coords <- distinct(data, dID, xid, yid, loc_id)
+#source("scripts/utils/hex_grouping.R")
+

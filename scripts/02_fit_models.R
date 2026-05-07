@@ -8,6 +8,9 @@ library(tidyverse)
 library(patchwork)
 library(posterior)
 
+### 1.0.2 Helpers ----
+source('scripts/utils/ask_prompts.R')
+
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 2 Simulation Study -----------
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -30,32 +33,32 @@ geomix_setup <- setupGeoMixModel(
   aformula = ~ 1 + d,
   variables = list(loc = "locID", groups = "group", xID = "x", yID = "y", dID = "d"),
   penalty = synthetic_list$penalty,
-  mcmc_control = list(niter = 2750, thin = 1,
-                      nbatches = 22, save_batches =T,
+  mcmc_control = list(niter = 4000, thin = 1,
+                      nbatches = 32, save_batches =T,
                       retain_draws = F)
 )
 
 ## 2.2 Run MCMC chains (parallel) ----
-run_sim <- confirm_run("the simulation study example...")
-if(run_sim){
-run_chains(geomix_setup,
- nchains = 4,
- path = path,
- LGFM = F,
- run_parallel = TRUE,
- load_previous_state = T,
- mc.cores = 50,
- seed = 16)
+sim_mode <- ask_run_mode("Simulation study — GeoMix chains")
+if (sim_mode %in% c("s", "c")) {
+  run_chains(geomix_setup,
+             nchains = 4,
+             path = path,
+             LGFM = F,
+             run_parallel = TRUE,
+             load_previous_state = sim_mode == "c",
+             mc.cores = 4,
+             seed = 16)
 }
 ## 2.3 Post-processing samples ----
-samples <- load_mcmc_samples(path,index = 5:32) %>%
-  map(~.x[seq(10,nrow(.x),10),])
+samples <- load_mcmc_samples(path,index = 5:32, thin = 10)
 
 params <- extract_parameters(samples)
 merged_params <- combine_chains(params)
 
 ## 2.4 Diagnostics ----
 diagnostics <- run_mcmc_diagnostics(params)
+save_diag_tables(diagnostics, path, "GeoMix")
 
 ### 2.4.1 Trace plots ----
 default_theme <-   theme(legend.position = "bottom",
@@ -190,17 +193,22 @@ ggsave("results/figures/syn_trace4.png", plot4, width = 4.6, height = 6.7)
 ggsave("results/figures/syn_traceY1.png", plot5, width = 4.6, height = 3)
 
 ## 2.5 Prediction ----
-pred <- produce_prediction(
-  samples,
-  geomix_setup,
-  nugget = F,
-  include_samples = T,
-  mc.cores = 50
-)
+dir.create(file.path(path, "predictions"), showWarnings = FALSE)
+sim_pred_mode <- ask_pred_mode("Simulation study — GeoMix predictions")
+if (sim_pred_mode == "l") {
+  pred <- readRDS(file.path(path, "predictions", "GeoMix_predictions.rds"))
+} else {
+  pred <- produce_prediction(
+    samples,
+    geomix_setup,
+    nugget = F,
+    include_samples = T,
+    mc.cores =  parallel::detectCores()
+  )
+  saveRDS(pred, file.path(path, "predictions", "GeoMix_predictions.rds"))
+}
 
 ### 2.5.1 Save outputs ----
-dir.create(file.path(path, "predictions"), showWarnings = FALSE)
-
 syn_data <- drop_na(synthetic_list$data) %>%
   mutate(SU = factor(Z1)) %>%
   cbind(.,model.matrix(~-1+SU,data = .))
@@ -211,25 +219,25 @@ syn_pred<- synthetic_list$data %>%
   cbind(.,model.matrix(~-1+SU,data = .)) %>%
   select(!Z2)
 
-saveRDS(syn_data,paste0(path,'predictions/data.rds'))
-saveRDS(syn_pred,paste0(path,'predictions/pred_df.rds'))
-saveRDS(pred, file.path(path,"predictions","GeoMix_predictions.rds"))
-saveRDS(merged_params, file.path(path,"predictions","GeoMix_params.rds"))
-
+if (sim_pred_mode == "r"){
+  saveRDS(syn_data, paste0(path, 'predictions/data.rds'))
+  saveRDS(syn_pred, paste0(path, 'predictions/pred_df.rds'))  
+  saveRDS(merged_params, file.path(path, "predictions", "GeoMix_params.rds"))
+} 
 ## 2.6 Run LGFM ----
-if(run_sim){
-run_chains(geomix_setup,
-           nchains = 4,
-           path = path,
-           LGFM = T,
-           run_parallel = TRUE,
-           load_previous_state = T,
-           mc.cores = 50,
-           seed = 16)
+sim_lgfm_mode <- ask_run_mode("Simulation study — LGFM chains")
+if (sim_lgfm_mode %in% c("s", "c")) {
+  run_chains(geomix_setup,
+             nchains = 4,
+             path = path,
+             LGFM = T,
+             run_parallel = TRUE,
+             load_previous_state = sim_lgfm_mode == "c",
+             mc.cores = 4,
+             seed = 16)
 }
 ### 2.6.1 Load samples ----
-samples_LGFM <- load_mcmc_samples(path, name = "LGFM", index = 5:32) %>%
-  map(~.x[seq(10,nrow(.x),10),])
+samples_LGFM <- load_mcmc_samples(path, name = "LGFM", index = 5:32, thin = 10)
 
 ### 2.6.2 Extract parameters ----
 params_LGFM <- extract_parameters(samples_LGFM)
@@ -237,23 +245,32 @@ merged_params_LGFM <- combine_chains(params_LGFM)
 
 ### 2.6.3 Diagnostics ----
 diagnostics_LGFM <- run_mcmc_diagnostics(params_LGFM, name = "LGFM")
+save_diag_tables(diagnostics_LGFM, path, "LGFM")
 
 ### 2.6.4 Compute predictions ----
-pred_LGFM <- produce_prediction(
-  samples_LGFM,
-  geomix_setup,
-  nugget = F,
-  include_samples = T,
-  mc.cores = 50
-)
+sim_lgfm_pred_mode <- ask_pred_mode("Simulation study — LGFM predictions")
+if (sim_lgfm_pred_mode == "l") {
+  pred_LGFM <- readRDS(file.path(path, "predictions", "LGFM_predictions.rds"))
+} else {
+  pred_LGFM <- produce_prediction(
+    samples_LGFM,
+    geomix_setup,
+    nugget = F,
+    include_samples = T,
+    mc.cores =  parallel::detectCores()
+  )
+  saveRDS(pred_LGFM, file.path(path, "predictions", "LGFM_predictions.rds"))
+}
 
 ### 2.6.5 Save outputs ----
-saveRDS(pred_LGFM, file.path(path,"predictions","LGFM_predictions.rds"))
-saveRDS(merged_params_LGFM, file.path(path,"predictions","LGFM_params.rds"))
+if (sim_lgfm_pred_mode == "r") saveRDS(merged_params_LGFM, file.path(path, "predictions", "LGFM_params.rds"))
 
 ## 2.7 Run competing models ----
 source('scripts/utils/fit_competing_models.R')
-run_comparisons(path, depth_interval = c(0,21))
+sim_comp_mode <- ask_pred_mode("Simulation study — competing models")
+if (sim_comp_mode == "r") {
+  run_comparisons(path, depth_interval = c(0,21))
+}
 
 ## 2.8 Compute results ----
 source('scripts/03_simulation_results.R')
@@ -269,9 +286,6 @@ dir.create(path, recursive = TRUE, showWarnings = FALSE)
 dir.create(file.path(path, "predictions"), showWarnings = FALSE)
 
 load("data/processed/data3D.RData")
-data$dID <- as.numeric(factor(data$d))
-
-saveRDS(full_df,file.path(path,'predictions/full_df.rds'))
 
 geomix_setup <- setupGeoMixModel(
   data,
@@ -288,22 +302,32 @@ geomix_setup <- setupGeoMixModel(
     dID = "dID",
     groups = "groups"
   ),
-  mcmc_control = list(niter = 5000, thin = 1,
-                      nbatches = 40, save_batches =T,
+  mcmc_control = list(niter = 4000, thin = 1,
+                      nbatches = 32, save_batches =T,
                       retain_draws = F)
 )
 
-beta <- estimate_beta(geomix_setup) # - Obtained 1.237988
-cov_par <- estimate_MAP_covariance(geomix_setup)
-saveRDS(beta,file.path(path,'beta.rds'))
-saveRDS(cov_par,file.path(path,'MAP_covariance.rds'))
-cov_par <- readRDS(file.path(path,'MAP_covariance.rds'))
+ijv_beta_mode <- ask_pred_mode("IJV wind farm — estimate beta")
+if (ijv_beta_mode == "l") {
+  beta <- readRDS(file.path(path, 'beta.rds'))
+} else {
+  beta <- estimate_beta(geomix_setup)$estimate # - Obtained 1.237988
+  saveRDS(beta, file.path(path, 'beta.rds'))
+}
+
+ijv_cov_mode <- ask_pred_mode("IJV wind farm — estimate MAP covariance")
+if (ijv_cov_mode == "l") {
+  cov_par <- readRDS(file.path(path, 'MAP_covariance.rds'))
+} else {
+  cov_par <- estimate_MAP_covariance(geomix_setup)
+  saveRDS(cov_par, file.path(path, 'MAP_covariance.rds'))
+}
 
 geomix_setup <- setupGeoMixModel(
   data,
   K = K,
   dims = dims,
-  beta = 1.237988,
+  beta = beta,
   m = 160,
   kappa = 0.9,
   aformula = ~1+d,
@@ -316,23 +340,22 @@ geomix_setup <- setupGeoMixModel(
   fix_lateral = T,
   inits = list(lL = cov_par$lL)
 )
-run_ijv <- confirm_run("the IJV wind farm zone example...")
 ## 3.2 Run MCMC chains (parallel) ----
-if(run_ijv){
-run_chains(geomix_setup,
-           nchains = 4,
-           path = path,
-           LGFM = F,
-           run_parallel = TRUE,
-           load_previous_state = F,
-           mc.cores = 50,
-           seed = 16)
+ijv_mode <- ask_run_mode("IJV wind farm — GeoMix chains")
+if (ijv_mode %in% c("s", "c")) {
+  run_chains(geomix_setup,
+             nchains = 4,
+             path = path,
+             LGFM = F,
+             run_parallel = TRUE,
+             load_previous_state = ijv_mode == "c",
+             mc.cores = 4,
+             seed = 16)
 }
 ## 3.3 Process samples ----
 geomix_setup <- readRDS(file.path(path,"GeoMix_1/geomix_setup.rds"))
 
-samples_post <- load_mcmc_samples(path, index = 5:32) %>%
-  map(~.x[seq(10,nrow(.x),10),]) # Thin
+samples_post <- load_mcmc_samples(path, index = 5:32, thin = 10) 
 
 params_post <- extract_parameters(samples_post)
 merged_params <- combine_chains(params_post)
@@ -341,6 +364,7 @@ merged_params <- combine_chains(params_post)
 diagnostics <- run_mcmc_diagnostics(
   exclude = c("sigma2_L",paste0("lL[",1:8,"]")),
   params_post, Y1index = geomix_setup$controlGibbs$Z2_ind)
+save_diag_tables(diagnostics, path, "GeoMix")
 
 ### 3.4.1 Trace plots ----
 default_theme <-   theme(legend.position = "bottom",
@@ -492,14 +516,20 @@ ggsave("results/figures/ijv_trace4.png", plot4, width = 4.6, height = 6.7)
 ggsave("results/figures/ijv_traceY1.png", diagnostics$plots$Y1, width = 4.6, height = 3)
 
 ## 3.5 Prediction ----
-test_pred <- produce_prediction(
-  samples_post,
-  geomix_setup,
-  nugget = T,
-  include_samples = T,
-  mc.cores = 50,
-  predict_index = which(!is.na(geomix_setup$df$qc) & is.na(geomix_setup$df$Z2))
-)
+ijv_pred_mode <- ask_pred_mode("IJV wind farm — GeoMix test predictions")
+if (ijv_pred_mode == "l") {
+  test_pred <- readRDS(file.path(path, "predictions", "GeoMix_predictions.rds"))
+} else {
+  test_pred <- produce_prediction(
+    samples_post,
+    geomix_setup,
+    nugget = T,
+    include_samples = T,
+    mc.cores =  parallel::detectCores(),
+    predict_index = which(!is.na(geomix_setup$df$qc) & is.na(geomix_setup$df$Z2))
+  )
+  saveRDS(test_pred, file.path(path, "predictions", "GeoMix_predictions.rds"))
+}
 
 ijv_data <- drop_na(geomix_setup$df) %>%
   mutate(SU = factor(Z1)) %>%
@@ -512,11 +542,12 @@ ijv_pred <- geomix_setup$df %>%
   select(!Z2)
 
 ### 3.5.1 Save outputs ----
-saveRDS(ijv_data,paste0(path,'predictions/data.rds'))
-saveRDS(ijv_pred,paste0(path,'predictions/pred_df.rds'))
-saveRDS(test_pred, file.path(path,"predictions","GeoMix_predictions.rds"))
-saveRDS(merged_params,file.path(path,'predictions/GeoMix_params.rds'))
-
+if (ijv_pred_mode == "r") {
+saveRDS(full_df,file.path(path,'predictions/full_df.rds'))
+saveRDS(ijv_data, paste0(path, 'predictions/data.rds'))
+saveRDS(ijv_pred, paste0(path, 'predictions/pred_df.rds'))
+saveRDS(merged_params, file.path(path, 'predictions/GeoMix_params.rds'))
+}
 ## 3.6 Grid predictions ----
 ### 3.6.1 Load Grid  ----
 library(sf)
@@ -532,66 +563,65 @@ geomix_setup$df <- geomix_setup$df %>%
   left_join(points_grid) %>%
   relocate(grid_id,.after = yid)
 
-dir.create(file.path(path, "gridpredictions"), showWarnings = FALSE)
-
 ### 3.6.2 Run Predictions ----
-grid_pred <- list()
-for(i in seq_along(grid_cells)){
-  cat(paste0(' |========================================| \n |        Grid Prediction ',i,' of 77         |\n |========================================| '))
+ijv_grid_mode <- ask_pred_mode("IJV wind farm — GeoMix grid predictions")
+if (ijv_grid_mode == "l") {
+  full_grid <- readRDS(paste0(path, 'gridpredictions/GeoMix_predictions.rds'))
+} else {
+  dir.create(file.path(path, "gridpredictions"), showWarnings = FALSE)
+  grid_pred <- list()
+  for(i in seq_along(grid_cells)){
+    cat(paste0(' |========================================| \n |        Grid Prediction ',i,' of 77         |\n |========================================| '))
 
-  pred_index <- which(geomix_setup$df$grid_id == grid_cells[i])
+    pred_index <- which(geomix_setup$df$grid_id == grid_cells[i])
 
-  grid_pred[[i]] <- produce_prediction(
-    samples_post,
-    geomix_setup,
-    nugget = T,
-    include_samples = T,
-    mc.cores = 50,
-    predict_index = pred_index
-  )
+    grid_pred[[i]] <- produce_prediction(
+      samples_post,
+      geomix_setup,
+      nugget = T,
+      include_samples = T,
+      mc.cores =  parallel::detectCores(),
+      predict_index = pred_index
+    )
 
-  grid_pred[[i]]$pred_index <- pred_index
+    grid_pred[[i]]$pred_index <- pred_index
 
-  saveRDS(grid_pred[[i]],
-          paste0(path,'gridpredictions/GeoMix_predictions_',i,'.rds'))
+    saveRDS(grid_pred[[i]],
+            paste0(path,'gridpredictions/GeoMix_predictions_',i,'.rds'))
+  }
+
+  ### 3.6.3 Combine Grid Predictions ----
+  full_grid <- list()
+  full_grid$mean    <- unlist(map(grid_pred, ~.x$mean))
+  full_grid$sd      <- unlist(map(grid_pred, ~.x$sd))
+  full_grid$samples <- do.call(rbind, map(grid_pred, ~.x$samples))
+  full_grid$order   <- unlist(map(grid_pred, ~.x$pred_index))
+
+  full_grid$mean    <- full_grid$mean[order(full_grid$order)]
+  full_grid$sd      <- full_grid$sd[order(full_grid$order)]
+  full_grid$samples <- full_grid$samples[order(full_grid$order), ]
+
+  ### 3.6.4 Save Grid Predictions ----
+  saveRDS(full_grid, paste0(path, 'gridpredictions/GeoMix_predictions.rds'))
+  saveRDS(full_grid$mean, paste0(path, 'gridpredictions/GeoMix_predictions_mean.rds'))
+  saveRDS(full_grid$sd,   paste0(path, 'gridpredictions/GeoMix_predictions_sd.rds'))
 }
 
-### 3.6.3 Load Grid Predictions ----
-grid_pred <- lapply(
-  paste0(path,'gridpredictions/GeoMix_predictions_',seq_along(grid_cells),'.rds'),
-  readRDS
-)
-
-full_grid <- list()
-full_grid$mean <- unlist(map(grid_pred,~.x$mean))
-full_grid$sd <- unlist(map(grid_pred,~.x$sd))
-full_grid$samples <- do.call(rbind,map(grid_pred,~.x$samples))
-full_grid$order <- unlist(map(grid_pred,~.x$pred_index))
-
-full_grid$mean <- full_grid$mean[order(full_grid$order)]
-full_grid$sd <- full_grid$sd[order(full_grid$order)]
-full_grid$samples <- full_grid$samples[order(full_grid$order),]
-
-### 3.6.4 Save Grid Predictions ----
-saveRDS(full_grid, paste0(path,'gridpredictions/GeoMix_predictions.rds'))
-saveRDS(full_grid$mean, paste0(path,'gridpredictions/GeoMix_predictions_mean.rds'))
-saveRDS(full_grid$sd, paste0(path,'gridpredictions/GeoMix_predictions_sd.rds'))
-
 ## 3.7 Run LGFM ----
-if(run_ijv){
+ijv_lgfm_mode <- ask_run_mode("IJV wind farm — LGFM chains")
+if (ijv_lgfm_mode %in% c("s", "c")) {
   run_chains(geomix_setup,
              nchains = 4,
              path = path,
              LGFM = T,
              run_parallel = TRUE,
-             load_previous_state = F,
-             mc.cores = 50,
+             load_previous_state = ijv_lgfm_mode == "c",
+             mc.cores = parallel::detectCores(),
              seed = 16)
 }
 
 ### 3.7.1 Load samples ----
-samples_LGFM <- load_mcmc_samples(path, name = "LGFM", index=1:19) %>%
-  map(~.x[seq(10,nrow(.x),10),])
+samples_LGFM <- load_mcmc_samples(path, name = "LGFM", index=1:19, thin = 10) 
 
 ### 3.7.2 Extract parameters ----
 params_LGFM <- extract_parameters(samples_LGFM)
@@ -599,24 +629,33 @@ merged_params_LGFM <- combine_chains(params_LGFM)
 
 ### 3.7.3 Diagnostics ----
 diagnostics_LGFM <- run_mcmc_diagnostics(params_LGFM, name = "LGFM")
+save_diag_tables(diagnostics_LGFM, path, "LGFM")
 
 ### 3.7.4 Compute predictions ----
-pred_LGFM <- produce_prediction(
-  samples_LGFM,
-  geomix_setup,
-  nugget = T,
-  include_samples = T,
-  mc.cores = 50,
-  predict_index = which(!is.na(geomix_setup$df$qc) & is.na(geomix_setup$df$Z2))
-)
+ijv_lgfm_pred_mode <- ask_pred_mode("IJV wind farm — LGFM predictions")
+if (ijv_lgfm_pred_mode == "l") {
+  pred_LGFM <- readRDS(file.path(path, "predictions", "LGFM_predictions.rds"))
+} else {
+  pred_LGFM <- produce_prediction(
+    samples_LGFM,
+    geomix_setup,
+    nugget = T,
+    include_samples = T,
+    mc.cores = parallel::detectCores(),
+    predict_index = which(!is.na(geomix_setup$df$qc) & is.na(geomix_setup$df$Z2))
+  )
+  saveRDS(pred_LGFM, file.path(path, "predictions", "LGFM_predictions.rds"))
+}
 
 ### 3.7.5 Save outputs ----
-saveRDS(pred_LGFM, file.path(path,"predictions","LGFM_predictions.rds"))
-saveRDS(merged_params_LGFM, file.path(path,"predictions","LGFM_params.rds"))
+if (ijv_lgfm_pred_mode == "r") saveRDS(merged_params_LGFM, file.path(path, "predictions", "LGFM_params.rds"))
 
 ## 3.8 Run competing models ----
 source('scripts/utils/fit_competing_models.R')
-run_comparisons(path, depth_interval = c(24,50))
+ijv_comp_mode <- ask_pred_mode("IJV wind farm — competing models")
+if (ijv_comp_mode == "r") {
+  run_comparisons(path, depth_interval = c(24,50))
+}
 
 ## 3.9 Map figures (saves data/processed/line_df.rds, data/processed/cell_grid_map.rds) ----
 source('scripts/05_map_figures.R')

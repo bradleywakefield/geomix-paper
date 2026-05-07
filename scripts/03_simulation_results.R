@@ -5,28 +5,41 @@
 ## 1.1 Preliminaries  ----
 source('scripts/utils/prediction_scoring.R')
 
-## 1.2 Load data and parmeters ----
-names <- c("GP","GW","LM","GPwC","GWwC","LGFM","GeoMix")
-GeoMix_params <- readRDS(paste0(path,"predictions/GeoMix_params.rds"))
-GeoMix_predictions <- readRDS(paste0(path,"predictions/GeoMix_predictions.rds"))
-pred_df <- readRDS(paste0(path,"predictions/pred_df.rds")) %>%
-  mutate(id = 'test')
-train_df <- readRDS(paste0(path,"predictions/data.rds")) %>%
-  mutate(id = 'train')
-df <- arrange(bind_rows(train_df,pred_df),y,x,d)
+## 1.2 Load data and parameters ----
+suppressMessages(suppressWarnings({
+  names <- c("GP","GW","LM","GPwC","GWwC","LGFM","GeoMix")
+  GeoMix_params <- readRDS(paste0(path,"predictions/GeoMix_params.rds"))
+  GeoMix_predictions <- readRDS(paste0(path,"predictions/GeoMix_predictions.rds"))
+  pred_df <- readRDS(paste0(path,"predictions/pred_df.rds")) %>%
+    mutate(id = 'test')
+  train_df <- readRDS(paste0(path,"predictions/data.rds")) %>%
+    mutate(id = 'train')
+  df <- arrange(bind_rows(train_df,pred_df),y,x,d)
+}))
 
 ## 1.3 Compute test evaluations ----
-prediction_list <- lapply(names,eval_prediction_Y2,path=path)
-prob_list <- c(list(compute_Z1(path)),lapply(c("LGFM","GeoMix"),eval_probability_Y1,path=path))
+suppressMessages(suppressWarnings({
+  prediction_list <- lapply(names, eval_prediction_Y2, path = path)
+  prob_list <- c(list(compute_Z1(path)), lapply(c("LGFM","GeoMix"), eval_probability_Y1, path = path))
+}))
 
 ## 1.4 Assemble test statistics ----
-stats_df <- bind_rows(map(prediction_list,~.x$stats))
-pred_df <- bind_rows(map(prediction_list,~.x$pred_df))
-prob_stats_df <- bind_rows(map(prob_list,~.x$stats))
+suppressMessages({
+  stats_df     <- bind_rows(map(prediction_list, ~.x$stats))
+  pred_df      <- bind_rows(map(prediction_list, ~.x$pred_df))
+  prob_stats_df <- bind_rows(map(prob_list, ~.x$stats))
+})
+
+## 1.4.1 Save tables ----
+dir.create("results/tables", recursive = TRUE, showWarnings = FALSE)
+write.csv(stats_df,      "results/tables/sim_stats.csv",      row.names = FALSE)
+write.csv(prob_stats_df, "results/tables/sim_prob_stats.csv", row.names = FALSE)
 
 ## 1.5 Quick check Z1 Y1hat agreement ----
-filter(prob_list[[3]]$prob_df,id == "test") %>%
-  summarise(mean(Y1hat == Z1))
+print(
+  filter(prob_list[[3]]$prob_df, id == "test") %>%
+    summarise(mean(Y1hat == Z1))
+)
 
 #%%%%%%%%%%%%%%%%%%
 # 2 Plot theme ----
@@ -62,7 +75,7 @@ Y2pred <- cbind(pred_df,as.data.frame(GeoMix_predictions$samples)) %>%
   pivot_longer(starts_with("V"),names_prefix = "V",
                names_to = "Iter",values_to = "Y2hat") %>%
   group_by(x,y,d,Y2) %>%
-  summarise(Y2hat_m = mean(Y2hat), Y2hat_sd = sd(Y2hat)) %>%
+  summarise(Y2hat_m = mean(Y2hat), Y2hat_sd = sd(Y2hat), .groups = "drop") %>%
   bind_rows(mutate(select(train_df,x,y,d,Y2,Z2),Y2hat_m = Z2,
                    Y2hat_sd = sqrt(GeoMix_params$params$tau2))) %>%
   rename(Y2hat = Y2hat_m) %>%
@@ -76,8 +89,10 @@ Y1probs <- prob_list[[3]]$prob_df %>%
   filter(y == yex)
 
 ## 3.3 Merge data sets ----
-full_pred_df <- left_join(Y1probs,Y2pred) %>%
-  left_join(Y1probs)
+suppressMessages({
+  full_pred_df <- left_join(Y1probs,Y2pred) %>%
+    left_join(Y1probs)
+})
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 4 Plot 1 - Cross-section panels ----
@@ -266,7 +281,7 @@ syn_plot <- GM_samp %>%
                       plot.margin = margin(0, 0, 30, 0))
 
 ## 5.3 Save plot ----
-ggsave("results/figures/syn-post.pdf",syn_plot,width=4.78,height=2.3,device=cairo_pdf)
+suppressMessages(ggsave("results/figures/syn-post.pdf",syn_plot,width=4.78,height=2.3,device=cairo_pdf))
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 6 Plot 3 - Parameter recovery ----
@@ -323,4 +338,4 @@ syn_param <- param_samples %>%
                    plot.title = element_text(size = 14))
 
 ## 6.4 Save plot ----
-ggsave("results/figures/syn-params.pdf",syn_param,width=4.78,height=6.5,device=cairo_pdf)
+suppressMessages(ggsave("results/figures/syn-params.pdf",syn_param,width=4.78,height=6.5,device=cairo_pdf))

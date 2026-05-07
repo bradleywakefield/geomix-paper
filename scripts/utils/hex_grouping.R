@@ -2,18 +2,18 @@
 # 1 Preliminaries ----
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+# Requires `lattice_coords`: a data frame with columns xid and yid,
+# one row per lattice location. Set this before sourcing.
+
 library(sf)
 library(dplyr)
-library(ggplot2)
-
-# Requires geomix_setup in memory (run after setupGeoMixModel in 02_fit_models.R)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 2 Build hexagonal grouping grid ----
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 ## 2.1 Convert lattice coordinates to sf points ----
-pts <- st_as_sf(distinct(geomix_setup$lattice_coords,xid,yid), coords = c("xid", "yid"), crs = NA)
+pts <- st_as_sf(distinct(lattice_coords, xid, yid), coords = c("xid", "yid"), crs = NA)
 
 ## 2.2 Create hexagonal grid over lattice extent ----
 cell_size <- 7.5
@@ -43,7 +43,7 @@ pts_joined <- st_join(pts, hex_grid, join = st_within)
 hex_counts <- pts_joined %>%
   st_drop_geometry() %>%
   group_by(grid_id) %>%
-  summarise(n = n())
+  summarise(n = n(), .groups = "drop")
 
 hex_grid <- left_join(hex_grid, hex_counts, by = "grid_id")
 hex_grid$n[is.na(hex_grid$n)] <- 0
@@ -91,7 +91,7 @@ repeat {
 
 pts_joined_final <- st_join(pts, hex_grid, join = st_within)
 
-pts_with_grid <- geomix_setup$lattice_coords %>%
+pts_with_grid <- lattice_coords %>%
   left_join(
     pts_joined_final %>% st_drop_geometry() %>% distinct(xid, yid, grid_id),
     by = c("xid", "yid")
@@ -103,3 +103,4 @@ pts_with_grid <- geomix_setup$lattice_coords %>%
 
 dir.create("data/processed", recursive = TRUE, showWarnings = FALSE)
 saveRDS(pts_with_grid, "data/processed/points_grid.rds")
+message("Saved data/processed/points_grid.rds")
