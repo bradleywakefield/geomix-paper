@@ -160,6 +160,7 @@ data$Z2[which(data$loc_id %in% test_locs)] <- NA
 
 ## 6.3 Depth grid and dimensions ----
 depth_vec <- sort(distinct(data,d)$d)
+data$dID <- as.numeric(factor(data$d))
 dimd <- length(depth_vec)
 dims <- c(dimd,dimx,dimy)
 
@@ -225,12 +226,17 @@ line_df <- st_set_geometry(select(line_grid,line,loc_id,xid,yid),value=NULL)
 saveRDS(line_df,"data/processed/line_df.rds")
 message("Saved data/processed/line_df.rds")
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# 8 Generate hexagonal grouping ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+lattice_coords <- distinct(data, dID, xid, yid)
+source("scripts/utils/hex_grouping.R")
+
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 8 Save processed data ----
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 rm(list = setdiff(ls(), c("data","lattice","dims","diagonals","K","full_df","test_locs","cpt_locs")))
-data$dID <- as.numeric(factor(data$d))
 
 dir.create("data/processed", recursive = TRUE, showWarnings = FALSE)
 save(data, full_df, test_locs, cpt_locs, dims, K,
@@ -238,9 +244,5 @@ save(data, full_df, test_locs, cpt_locs, dims, K,
 message("Saved data/processed/data3D.RData")
 
 
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# 9 Generate hexagonal grouping ----
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lattice_coords <- distinct(data, dID, xid, yid, loc_id)
-#source("scripts/utils/hex_grouping.R")
+
 

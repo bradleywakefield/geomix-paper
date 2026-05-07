@@ -13,7 +13,9 @@ library(dplyr)
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 ## 2.1 Convert lattice coordinates to sf points ----
-pts <- st_as_sf(distinct(lattice_coords, xid, yid), coords = c("xid", "yid"), crs = NA)
+pts <- st_as_sf(distinct(lattice_coords, xid, yid), 
+                coords = c("xid", "yid"), crs = NA,
+                remove = F)
 
 ## 2.2 Create hexagonal grid over lattice extent ----
 cell_size <- 7.5
@@ -91,16 +93,10 @@ repeat {
 
 pts_joined_final <- st_join(pts, hex_grid, join = st_within)
 
-pts_with_grid <- lattice_coords %>%
-  left_join(
-    pts_joined_final %>% st_drop_geometry() %>% distinct(xid, yid, grid_id),
-    by = c("xid", "yid")
-  )
-
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 6 Save result ----
 #%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 dir.create("data/processed", recursive = TRUE, showWarnings = FALSE)
-saveRDS(pts_with_grid, "data/processed/points_grid.rds")
+saveRDS(pts_joined_final, "data/processed/points_grid.rds")
 message("Saved data/processed/points_grid.rds")
