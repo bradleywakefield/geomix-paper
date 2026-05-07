@@ -84,117 +84,157 @@ full_pred_df <- left_join(Y1probs,Y2pred) %>%
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 ## 4.1 Plot latent, observed, MAP strata ----
-g1 <-
-  full_pred_df %>%
-  select(x,y,d,Y1_val = Y1,Z1_val = Z1,Y1hat_val = Y1hat,Y1hat_prob) %>%
-  mutate(Y1_prob = 1, Z1_prob = 1) %>%
-  pivot_longer(!c(x,y,d),names_to = c("facet","type"), names_sep = "_") %>%
-  pivot_wider(names_from = type, values_from = value) %>%
-  mutate(facet = factor(facet,levels = c("Y1","Z1","Y1hat"),
-                        labels = c("Latent Geological Strata",
-                                   "Ground Model Strata",
-                                   "MAP Geological Strata"))) %>%
-  ggplot()+
-  geom_tile(aes(x = x, y = d, fill = factor(val)),show.legend = T)+
-  scale_fill_manual(values = colours)+
-  scale_y_reverse(limits = c(-0.5,20))+theme_bw()+default_theme+
-  theme(legend.position = "bottom",
-        legend.key.size = unit(0.4,"cm"),
-        legend.key.spacing = unit(0.05,"cm"),
-        plot.margin = margin(0, 0, 0, 0),
-        axis.title.x = element_blank(),
-        axis.text.x = element_blank(), axis.ticks.x = element_blank())+
-  guides(fill = guide_legend(nrow=2), alpha = "none")+
-  facet_wrap(vars(facet),ncol = 1)+
-  labs(x="",y="Depth (m)",
-       fill="Geological\nStrata")
+g1 <- 
+  full_pred_df %>% 
+  select(x, y, d, Y1_val = Y1, Z1_val = Z1, Y1hat_val = Y1hat, Y1hat_prob) %>% 
+  mutate(Y1_prob = 1, Z1_prob = 1) %>% 
+  pivot_longer(
+    cols = -c(x, y, d),
+    names_to = c("facet", "type"),
+    names_sep = "_"
+  ) %>%
+  pivot_wider(names_from = type, values_from = value) %>% 
+  mutate(
+    facet = factor(
+      facet,
+      levels = c("Y1","Z1","Y1hat"), 
+      labels = c(
+        "Latent Strata (Y1)",
+        "Ground Model (Z1)",
+        "MAP Strata"
+      )
+    )
+  ) %>% 
+  ggplot() +
+  geom_tile(aes(x = x, y = d, fill = factor(val)), show.legend = TRUE) +
+  scale_fill_manual(values = colours, drop = FALSE) +
+  scale_y_reverse(limits = c(20, -0.5)) +
+  theme_bw() + default_theme +
+  theme(
+    legend.position = "bottom",  
+    legend.key.size = unit(0.4,"cm"),
+    legend.key.spacing = unit(0.05,"cm"),
+    plot.margin = margin(0, 0, 0, 0),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(), 
+    axis.ticks.x = element_blank()
+  ) +
+  guides(fill = guide_legend(nrow = 2)) +
+  facet_wrap(vars(facet), nrow = 1) +
+  labs(x = "", y = "Depth (m)", fill = "Geological Strata")
 
-## 4.2 Plot latent, observed, and predicted geotechnical ----
-g2 <-  full_pred_df %>%
-  select(x,y,d,Y2,Z2,Y2hat) %>%
-  pivot_longer(!c(x,y,d),names_to = c("facet")) %>%
-  mutate(facet = factor(facet,levels = c("Y2","Z2","Y2hat"),
-                        labels = c("Latent Geotechnical Property",
-                                   "Geotechnical Measurements",
-                                   "Predicted Geotechnical Property"))) %>%
-  drop_na() %>%
-  ggplot()+
-  geom_tile(aes(x = x, y = d, fill = value),show.legend = T)+
-  scale_fill_distiller(palette = "Spectral")+
-  scale_y_reverse(limits = c(-0.5,20))+theme_bw()+ default_theme+
-  theme(legend.position = "bottom",legend.key.size = unit(0.5,"cm"),
-        legend.key.spacing = unit(0.05,"cm"),
-        plot.margin = margin(0, 0, 0, 0),axis.title.x = element_blank(),
-        axis.text.x = element_blank(), axis.ticks.x = element_blank())+
-  facet_wrap(vars(facet),ncol = 1)+
-  labs(x="",y="",
-       fill="Geotechnics")
+## 4.2 Plot latent, observed, predicted geotechnical ----
+g2 <-  
+  full_pred_df %>% 
+  select(x, y, d, Y2, Z2, Y2hat) %>% 
+  pivot_longer(
+    cols = -c(x, y, d),
+    names_to = "facet",
+    values_to = "value"
+  ) %>%
+  mutate(
+    facet = factor(
+      facet,
+      levels = c("Y2","Z2","Y2hat"), 
+      labels = c(
+        "Latent Geotechnical\nProperty (Y2)",
+        "Geotechnical\nMeasurements (Z2)",
+        "Geotechnical\nPredictions"
+      )
+    )
+  ) %>% 
+  drop_na(value) %>% 
+  ggplot() +
+  geom_tile(aes(x = x, y = d, fill = value), show.legend = TRUE) +
+  scale_fill_distiller(palette = "Spectral") +
+  scale_y_reverse(limits = c(20, -0.5)) +
+  theme_bw() + default_theme +
+  theme(
+    legend.position = "bottom",
+    legend.key.size = unit(0.5,"cm"),
+    legend.key.spacing = unit(0.05,"cm"),
+    plot.margin = margin(0, 0, 0, 0),
+    axis.title.x = element_blank()
+  ) +
+  facet_wrap(vars(facet), nrow = 1) +
+  labs(x = "", y = "Depth (m)", fill = "Geotechnics")
 
 ## 4.3 Probability of MAP ----
-g3 <-
-  full_pred_df %>%
-  ggplot()+
-  geom_tile(aes(x = x, y = d, fill = Y1hat_prob),show.legend = T)+
-  scale_fill_distiller(palette = "Blues", breaks = c(0.6,0.8,1))+
-  scale_y_reverse(limits = c(-0.5,20))+theme_bw()+default_theme+
-  facet_wrap(vars("Probability of the MAP Strata"),ncol = 1)+
-  theme(legend.position = "bottom", legend.key.size = unit(0.5,"cm"),
-        legend.key.spacing = unit(0.05,"cm"))+
-  labs(x="Distance along x axis",y="",
-       fill="MAP\nprobability")
+g3 <- 
+  full_pred_df %>% 
+  mutate(facet = "MAP Probability") %>% 
+  ggplot() +
+  geom_tile(aes(x = x, y = d, fill = Y1hat_prob), show.legend = TRUE) +
+  scale_fill_distiller(palette = "Blues", breaks = c(0.6,0.8,1)) +
+  scale_y_reverse(limits = c(20, -0.5)) +
+  theme_bw() + default_theme +
+  facet_wrap(vars(facet), nrow = 1) +
+  theme(
+    legend.position = "bottom",
+    legend.key.size = unit(0.5,"cm"),
+    legend.key.spacing = unit(0.05,"cm"),
+    plot.margin = margin(0,0,0,5),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank()
+  ) +
+  labs(x = "", y = "", fill = "MAP probability")
 
 ## 4.4 Posterior standard deviation ----
-g4 <-  full_pred_df %>%
-  ggplot()+
-  geom_tile(aes(x = x, y = d, fill = Y2hat_sd),show.legend = T)+
-  scale_fill_distiller(palette = "BrBG")+
-  scale_y_reverse(limits = c(-0.5,20))+theme_bw()+ default_theme+
-  theme(legend.position = "bottom",legend.key.size = unit(0.5,"cm"),
-        legend.key.spacing = unit(0.05,"cm"))+
-  facet_wrap(vars("Std Deviation of Predictions"),ncol = 1)+
-  labs(x="Distance along x axis",y="",
-       fill="Standard\ndeviation")
+g4 <-  
+  full_pred_df %>% 
+  mutate(facet = "Geotechnical\nPrediction SD") %>% 
+  ggplot() +
+  geom_tile(aes(x = x, y = d, fill = Y2hat_sd), show.legend = TRUE) +
+  scale_fill_distiller(palette = "BrBG") +
+  scale_y_reverse(limits = c(20, -0.5)) +
+  theme_bw() + default_theme +
+  theme(
+    legend.position = "bottom",
+    legend.key.size = unit(0.5,"cm"),
+    legend.key.spacing = unit(0.05,"cm"),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.title = element_blank(),
+    plot.margin = margin(l = 5)
+  ) +
+  facet_wrap(vars(facet), nrow = 1) +
+  labs(x = "Distance along x axis", y = "", fill = "Standard deviation")
 
-## 4.5 Extract legends (vertical, for right-column layout) ----
-leg_theme <- theme(
-  legend.position       = "right",
-  legend.box            = "vertical",
-  legend.title          = element_text(hjust = 0.5, size = 8),
-  legend.title.position = "top",
-  legend.key.width      = unit(0.4, "cm")
-)
-get_leg_vert <- function(p) cowplot::get_legend(p + leg_theme)
-leg_strata <- get_leg_vert(g1 + guides(fill = guide_legend(ncol = 2, keywidth = unit(0.4, "cm"))))
-leg_prop   <- get_leg_vert(g2 + guides(fill = guide_colorbar(barwidth = unit(0.5, "cm"), barheight = unit(1.3, "cm"))))
-leg_prob   <- get_leg_vert(g3 + guides(fill = guide_colorbar(barwidth = unit(0.5, "cm"), barheight = unit(1.2, "cm"))) +
-                theme(legend.title = element_text(hjust = 0.5, size = 8, margin = margin(b = 4))))
-leg_sd     <- get_leg_vert(g4 + guides(fill = guide_colorbar(barwidth = unit(0.5, "cm"), barheight = unit(1.4, "cm"))))
+## 4.5 Extract legends ----
+leg_strata <- get_leg(g1)   # strata legend
+leg_prop   <- get_leg(g2)   # geotechnical property legend
+leg_prob   <- get_leg(g3)   # probability legend
+leg_sd     <- get_leg(g4)   # sd legend
 
 ## 4.6 Remove legends ----
-g1n <- g1 + theme(legend.position = "none")
-g2n <- g2 + theme(legend.position = "none")
-g3n <- g3 + theme(legend.position = "none")
+g1n <- g1 + theme(legend.position = "none") 
+g2n <- g2 + theme(legend.position = "none") 
+g3n <- g3 + theme(legend.position = "none") 
 g4n <- g4 + theme(legend.position = "none")
 
-## 4.7  Format plots ----
-p_leg_strata <- wrap_elements(leg_strata)
-p_leg_prop   <- wrap_elements(leg_prop)
-p_leg_prob   <- wrap_elements(leg_prob)
-p_leg_sd     <- wrap_elements(leg_sd)
+## 4.7 Wrap legends ----
+p_leg_strata <- wrap_elements(full = leg_strata)
+p_leg_prop   <- wrap_elements(full = leg_prop)
+p_leg_prob   <- wrap_elements(full = leg_prob)
+p_leg_sd     <- wrap_elements(full = leg_sd)
 
-## 4.8  Make columns and assemble plots ----
-left_col  <- ((g1n / g3n) + plot_layout(heights = c(4, 1)))
-right_col <- ((g2n / g4n) + plot_layout(heights = c(4, 1)))
-leg_col   <- (p_leg_strata / plot_spacer() / p_leg_prop / plot_spacer() / p_leg_prob / plot_spacer() / p_leg_sd) +
-  plot_layout(heights = c(0.95, 0.05, 0.95, 0.05, 0.95, 0.1, 0.95))
+## 4.8 Layout ----
+top_col <- (g1n + g3n) + plot_layout(widths = c(7, 2))
+bottom_col <- (g2n + g4n) + plot_layout(widths = c(7, 2))
 
-## 4.9  Final plot ----
+## 4.9 Final plot ----
 syn_cross <-
-  ((left_col | right_col | plot_spacer() | leg_col) +
-     plot_layout(widths = c(5, 5, 0, 2)))
+  (top_col / bottom_col) /
+  (
+    (plot_spacer() | p_leg_strata | plot_spacer() | p_leg_prob | plot_spacer() |
+       p_leg_prop | plot_spacer() | p_leg_sd) +
+      plot_layout(widths = c(0,1, 0.05, 1, 0.05, 1, 0.05, 1))
+  ) +
+  plot_layout(heights = c(2, 2, 1))
 
 ## 4.10  Save plot ----
-ggsave("results/figures/syn-cross.pdf",syn_cross,width=4.78,height=3.5,device=cairo_pdf)
+ggsave("results/figures/syn-cross.pdf",syn_cross,width=4.78,height=2.8,device=cairo_pdf)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 5 Plot 2 - Posterior samples.       ----

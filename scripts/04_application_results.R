@@ -31,7 +31,7 @@ train_locs <- distinct(drop_na(geomix_setup$df),x,y)
 
 ## 2.2 Evaluate test performance ----
 ### 2.2.1 Model names to evaluate ----
-names <- "GeoMix"
+names <- c("GP","GW","LGFM","LM","GPwC","GWwC","GeoMix")
 ### 2.2.2  Evaluate predictions for each model ----
 prediction_list <- lapply(names,eval_prediction_Z2,path = path)
 
@@ -136,8 +136,9 @@ gtest <- pred_df %>%
   )
 
 ## 3.2 Small test CPT profiles qc ----
+set.seed(17)
 gtest_small <- pred_df %>%
-  filter(loc_id %in% select_locID[c(1:4,13:16)]) %>%
+  filter(loc_id %in% select_locID[sample(1:16,6)]) %>%
   filter(model %in% c("GeoMix", "LM")) %>%
   group_by(loc_id) %>%
   mutate(
@@ -172,7 +173,7 @@ gtest_small <- pred_df %>%
     aes(y = Z2_mean, colour = "geomix"),
     linewidth = 0.4
   ) +
-  facet_wrap(vars(label), nrow = 2) +
+  facet_wrap(vars(label), nrow = 1) +
   scale_x_reverse() +
   scale_colour_manual(
     values = c(
@@ -197,7 +198,8 @@ gtest_small <- pred_df %>%
   default_theme +
   theme(legend.key.spacing = unit(0.1,"cm"),
         legend.key.size = unit(0.7,"cm"),
-        legend.spacing.x  = unit(0.3, "cm"),)+
+        legend.spacing.x  = unit(0.3, "cm"),
+        strip.text = element_text(size=6))+
   labs(
     x = "Depth (m)",
     y = expression("Cone tip resistance " ~ q[c]),
@@ -206,7 +208,7 @@ gtest_small <- pred_df %>%
 
 ## 3.3 Save plots ----
 ggsave("results/figures/ijv-test.pdf",gtest,width = 4.78, height = 4.8)
-ggsave("results/figures/ijv-test-small.pdf",gtest_small,width = 4.78, height = 2.8)
+ggsave("results/figures/ijv-test-small.pdf",gtest_small,width = 4.78, height = 2.1)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 4. Grid Plots ----
@@ -247,19 +249,19 @@ centred_locations <- distinct(geomix_setup$df,loc_id,x,y) %>%
 
 ## 4.3 Predicted qc (Z2) plot ----
 g0 <- geomix_setup$df %>%
-  filter(d %in% seq(28, 46, 2)) %>%
+  filter(d %in% seq(28, 46, 3)) %>%
   left_join(centred_locations) %>%
   ggplot() +
   geom_tile(aes(x = X, y = Y, fill = Z2_mean), width = 0.36, height = 0.36) +
-  facet_wrap(vars(factor(d, levels = seq(28, 46, 2),
-                         labels = paste0(seq(28, 46, 2), "m BSL"))), nrow = 2) +
+  facet_wrap(vars(factor(d, levels = seq(28, 46, 3),
+                         labels = paste0(seq(28, 46, 3), "m BSL"))), nrow = 1) +
   scale_fill_distiller(
     palette = "Spectral",
     label = ~round(inv_box_cox(.x)),
     breaks = box_cox(c(0, 5, 15, 30, 50, 75, 100)),
     guide = guide_colorbar(
       barwidth = unit(8, "cm"),
-      barheight = unit(4, "mm")
+      barheight = unit(3, "mm")
     )
   ) +
   theme_bw() +default_theme+
@@ -271,13 +273,13 @@ g0 <- geomix_setup$df %>%
 ## 4.4 Ground model (Z1) plot ----
 gap <- 0.35
 g1 <- geomix_setup$df %>%
-  filter(d %in% seq(28, 46, 2)) %>%
+  filter(d %in% seq(28, 46, 3)) %>%
   left_join(centred_locations) %>%
   mutate(Y1 = factor(Z1,levels = 1:8, labels = c("GT1","GT2c","GT2","GT3","GT4","GT5","GT5*","GT6"))) %>%
   ggplot() +
   geom_tile(aes(x = X, y = Y, fill = Y1), width = 0.36, height = 0.36) +
-  facet_wrap(vars(factor(d, levels = seq(28, 46, 2),
-                         labels = paste0(seq(28, 46, 2), "m BSL"))), nrow = 2) +
+  facet_wrap(vars(factor(d, levels = seq(28, 46, 3),
+                         labels = paste0(seq(28, 46, 3), "m BSL"))), nrow = 1) +
   theme_bw() + default_theme + theme(plot.subtitle = element_text(hjust = 1))+
   scale_fill_manual(values = colours)+
   coord_fixed()+
@@ -287,13 +289,13 @@ g1 <- geomix_setup$df %>%
 
 ## 4.5 MAP stratigraphy (Y1) plot ----
 g2 <- geomix_setup$df %>%
-  filter(d %in% seq(28, 46, 2)) %>%
+  filter(d %in% seq(28, 46, 3)) %>%
   left_join(centred_locations) %>%
   mutate(Y1 = factor(Y1,levels = 1:8, labels = c("GT1","GT2c","GT2","GT3","GT4","GT5","GT5*","GT6"))) %>%
   ggplot() +
   geom_tile(aes(x = X, y = Y, fill = Y1), width = 0.36, height = 0.36) +
-  facet_wrap(vars(factor(d, levels = seq(28, 46, 2),
-                         labels = paste0(seq(28, 46, 2), "m BSL"))), nrow = 2) +
+  facet_wrap(vars(factor(d, levels = seq(28, 46, 3),
+                         labels = paste0(seq(28, 46, 3), "m BSL"))), nrow = 1) +
   theme_bw() + default_theme +
   coord_fixed()+
   scale_fill_manual(values = colours)+
@@ -301,9 +303,9 @@ g2 <- geomix_setup$df %>%
        fill = expression(atop("Maximum A Posteriori","Geological Strata")))
 
 ## 4.6 Save  plots ----
-ggsave("results/figures/ijv-z1.pdf",g1,width = 4.78, height = 2.8)
-ggsave("results/figures/ijv-z2.pdf",g0,width = 4.78, height = 2.8)
-ggsave("results/figures/ijv-y1.pdf",g2,width = 4.78, height = 2.8)
+ggsave("results/figures/ijv-z1.pdf",g1,width = 4.78, height = 2)
+ggsave("results/figures/ijv-z2.pdf",g0,width = 4.78, height = 2)
+ggsave("results/figures/ijv-y1.pdf",g2,width = 4.78, height = 2)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 5. Cross-section plots  ----

@@ -48,10 +48,7 @@ run_chains(geomix_setup,
  seed = 16)
 }
 ## 2.3 Post-processing samples ----
-nburnin <- 250
-
-samples <- load_mcmc_samples(path) %>%
-  map( ~.x[-(1:nburnin),]) %>%
+samples <- load_mcmc_samples(path,index = 5:32) %>%
   map(~.x[seq(10,nrow(.x),10),])
 
 params <- extract_parameters(samples)
@@ -108,7 +105,7 @@ diagCM_df <- diag_df %>%
   ) %>%
   select(-idx)
 
-thin <- 1
+thin <- 10
 #### 2.4.1.2 Plot 1 - alpha + other params ----
 g1 <- diagGP_df %>%
   filter(type %in% c("alpha0","alpha1")) %>%
@@ -118,7 +115,7 @@ g1 <- diagGP_df %>%
   facet_wrap(vars(parameter), scales = "free_y", ncol = 2)+
   theme_bw()+default_theme+labs(x="Iteration", y="",col = "Chain")+
   theme(axis.title.y = element_blank(), plot.margin = margin(0,7,0,0))+
-  scale_x_continuous(breaks = c(0,100,200),
+  scale_x_continuous(breaks = c(0,100,200,300),
                      labels = \(x) format(x*thin, big.mark = ",") )
 
 g2 <- diagGP_df %>%
@@ -128,7 +125,7 @@ g2 <- diagGP_df %>%
             alpha = 0.6, linewidth = 0.2, show.legend = F)+
   facet_wrap(vars(parameter), scales = "free_y", ncol = 1)+
   theme_bw()+default_theme+labs(x="",y="")+theme(axis.title = element_blank())+
-  scale_x_continuous(breaks = c(0,100,200),
+  scale_x_continuous(breaks = c(0,100,200,300),
                      labels = \(x) format(x*thin, big.mark = ",") )
 plot1 <- (g1 | (g2 / plot_spacer())) +
   plot_layout(heights = c(1, 1),widths = c(2.3,1))
@@ -142,7 +139,7 @@ plot2 <- diagGP_df %>%
   facet_wrap(vars(parameter), scales = "free_y", ncol = 3)+
   theme_bw()+default_theme+labs(x="Iteration", y="",col = "Chain")+
   theme(axis.title.y = element_blank(),plot.margin = margin(0,7,0,0))+
-  scale_x_continuous(breaks = c(0,100,200),
+  scale_x_continuous(breaks = c(0,100,200,300),
                      labels = \(x) format(x*thin, big.mark = ",") )
 
 #### 2.4.1.4 Plot 3 - gamma page 1 ----
@@ -157,7 +154,7 @@ plot3 <- diagCM_df %>%
         axis.title.x = element_text(margin = margin(t = -45)),
         axis.title.y = element_blank(),
         plot.margin = margin(0,7,40,0))+
-  scale_x_continuous(breaks = c(0,100,200),
+  scale_x_continuous(breaks = c(0,100,200,300),
                      labels = \(x) format(x*thin, big.mark = ",") )
 
 #### 2.4.1.5 Plot 4 - gamma page 2 ----
@@ -172,7 +169,7 @@ plot4 <- diagCM_df %>%
         axis.title.x = element_text(margin = margin(t = -45)),
         axis.title.y = element_blank(),
         plot.margin = margin(0,7,40,0))+
-  scale_x_continuous(breaks = c(0,100,200),
+  scale_x_continuous(breaks = c(0,100,200,300),
                      labels = \(x) format(x*thin, big.mark = ",") )
 
 #### 2.4.1.5 Plot 5 - Y1 count ----
@@ -182,7 +179,7 @@ plot5 <-  diagnostics$plots$Y1 +
   theme(legend.position = c(0.85,0.075),
         legend.title.position = "top",
         plot.margin = margin(0,7,0,0))+
-  scale_x_continuous(breaks = c(0,100,200),
+  scale_x_continuous(breaks = c(0,100,200,300),
                      labels = \(x) format(x*thin, big.mark = ",") )
 
 #### 2.4.1.7 Save plots ----
@@ -231,8 +228,7 @@ run_chains(geomix_setup,
            seed = 16)
 }
 ### 2.6.1 Load samples ----
-samples_LGFM <- load_mcmc_samples(path, name = "LGFM") %>%
-  map( ~.x[-(1:nburnin),]) %>%
+samples_LGFM <- load_mcmc_samples(path, name = "LGFM", index = 5:32) %>%
   map(~.x[seq(10,nrow(.x),10),])
 
 ### 2.6.2 Extract parameters ----
@@ -240,7 +236,7 @@ params_LGFM <- extract_parameters(samples_LGFM)
 merged_params_LGFM <- combine_chains(params_LGFM)
 
 ### 2.6.3 Diagnostics ----
-diagnostics_LGFM <- run_mcmc_diagnostics(params_LGFM)
+diagnostics_LGFM <- run_mcmc_diagnostics(params_LGFM, name = "LGFM")
 
 ### 2.6.4 Compute predictions ----
 pred_LGFM <- produce_prediction(
@@ -405,7 +401,7 @@ ggplot()+
   theme_bw()+default_theme+labs(x="Iteration", y="",col = "Chain")+
   theme(axis.title.y = element_blank(), plot.margin = margin(0,4,0,0))+
   scale_x_continuous(breaks = c(0,100,200,300),
-                     labels = \(x) if_else(x==300,
+                     labels = \(x) if_else(x==350,
                                            paste0(format(x*thin, big.mark = ","),'  '),
                                            format(x*thin, big.mark = ",") ))
 
@@ -420,7 +416,7 @@ g1 <- diagGP_df %>%
   theme_bw()+default_theme+labs(x="Iteration", y="",col = "Chain")+
   theme(axis.title.y = element_blank(),plot.margin = margin(0,5,0,0))+
   scale_x_continuous(breaks = c(0,100,200,300),
-                     labels = \(x) if_else(x==300,
+                     labels = \(x) if_else(x==350,
                                            paste0(format(x*thin, big.mark = ","),'  '),
                                            format(x*thin, big.mark = ",") ))
 g2 <- diagGP_df %>%
@@ -431,7 +427,7 @@ g2 <- diagGP_df %>%
   facet_wrap(vars(parameter), scales = "free_y", ncol = 1)+
   theme_bw()+default_theme+labs(x="",y="")+theme(axis.title = element_blank())+
   scale_x_continuous(breaks = c(0,100,200,300),
-                     labels = \(x) if_else(x==300,
+                     labels = \(x) if_else(x==350,
                                            paste0(format(x*thin, big.mark = ","),'   '),
                                            format(x*thin, big.mark = ",") ))
 right_col <- (g2 / plot_spacer()) +
@@ -457,7 +453,7 @@ plot3 <- diagCM_df %>%
         axis.title.y = element_blank(),
         plot.margin = margin(0,5,40,0))+
   scale_x_continuous(breaks = c(0,100,200,300),
-                     labels = \(x) if_else(x==300,
+                     labels = \(x) if_else(x==350,
                                            paste0(format(x*thin, big.mark = ","),'  '),
                                            format(x*thin, big.mark = ",") ))
 
@@ -474,7 +470,7 @@ plot4 <- diagCM_df %>%
         axis.title.y = element_blank(),
         plot.margin = margin(0,5,40,0))+
   scale_x_continuous(breaks = c(0,100,200,300),
-                     labels = \(x) if_else(x==300,
+                     labels = \(x) if_else(x==350,
                                            paste0(format(x*thin, big.mark = ","),'  '),
                                            format(x*thin, big.mark = ",") ))
 
@@ -484,7 +480,7 @@ plot5 <-  diagnostics$plots$Y1 +
         legend.title.position = "top",
         plot.margin = margin(0,5,0,0))+
   scale_x_continuous(breaks = c(0,100,200,300),
-                     labels = \(x) if_else(x==300,
+                     labels = \(x) if_else(x==350,
                                            paste0(format(x*thin, big.mark = ","),'  '),
                                            format(x*thin, big.mark = ",") ))
 #### 3.4.1.6 Save plots ----
@@ -594,8 +590,7 @@ if(run_ijv){
 }
 
 ### 3.7.1 Load samples ----
-samples_LGFM <- load_mcmc_samples(path, name = "LGFM", index=1:18) %>%
-  map( ~.x[-(1:nburnin),]) %>%
+samples_LGFM <- load_mcmc_samples(path, name = "LGFM", index=1:19) %>%
   map(~.x[seq(10,nrow(.x),10),])
 
 ### 3.7.2 Extract parameters ----
@@ -603,7 +598,7 @@ params_LGFM <- extract_parameters(samples_LGFM)
 merged_params_LGFM <- combine_chains(params_LGFM)
 
 ### 3.7.3 Diagnostics ----
-diagnostics_LGFM <- run_mcmc_diagnostics(params_LGFM)
+diagnostics_LGFM <- run_mcmc_diagnostics(params_LGFM, name = "LGFM")
 
 ### 3.7.4 Compute predictions ----
 pred_LGFM <- produce_prediction(

@@ -21,12 +21,16 @@ get_mode <- function(x) names(sort(table(x), decreasing = TRUE))[1]
 get_mode_prob <- function(x) max(table(x))/length(x)
 colours <-c("gold","darkorange3", "forestgreen","darkblue","maroon", "red4", "dodgerblue4","gray30")
 get_leg <- function(p) {
-  cowplot::get_legend(
+  legs <- cowplot::get_plot_component(
     p + theme(
       legend.position = "bottom",
       legend.box = "horizontal"
-    )
+    ),
+    "guide-box",
+    return_all = TRUE
   )
+  
+  legs[[which.max(vapply(legs, function(x) length(x$grobs), integer(1)))]]
 }
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
