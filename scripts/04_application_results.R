@@ -260,15 +260,16 @@ g0 <- geomix_setup$df %>%
     label = ~round(inv_box_cox(.x)),
     breaks = box_cox(c(0, 5, 15, 30, 50, 75, 100)),
     guide = guide_colorbar(
-      barwidth = unit(8, "cm"),
-      barheight = unit(3, "mm")
+      barwidth = unit(5, "cm"),
+      barheight = unit(4, "mm")
     )
   ) +
   theme_bw() +default_theme+
+  theme(legend.title.position = "top", legend.title.align = 0.5,
+        axis.title.x = element_blank(), plot.title = element_blank())+
   coord_fixed()+
   labs(x = "Easting (km)", y = "Northing (km)",
-       fill = expression(atop("Net Cone Tip","Resistance"~q[c])),
-       title = "")
+       fill = expression("Cone Tip Resistance"~q[c]))
 
 ## 4.4 Ground model (Z1) plot ----
 gap <- 0.35
@@ -284,7 +285,7 @@ g1 <- geomix_setup$df %>%
   scale_fill_manual(values = colours)+
   coord_fixed()+
   labs(x = "Easting (km)", y = "Northing (km)",
-       subtitle = "BSL = Below Seal Level",
+       subtitle = "BSL = Below Sea Level",
        fill = expression(atop("Ground Model","Geological Strata")))
 
 ## 4.5 MAP stratigraphy (Y1) plot ----
@@ -298,14 +299,43 @@ g2 <- geomix_setup$df %>%
                          labels = paste0(seq(28, 46, 3), "m BSL"))), nrow = 1) +
   theme_bw() + default_theme +
   coord_fixed()+
+  theme(legend.title.position = "top", legend.title.align = 0.5,
+        legend.key.spacing = unit(0.05,"cm"), plot.title = element_blank())+
   scale_fill_manual(values = colours)+
   labs(x = "Easting (km)", y = "Northing (km)",
-       fill = expression(atop("Maximum A Posteriori","Geological Strata")))
+       fill = expression("MAP Geological Strata"))
 
-## 4.6 Save  plots ----
+## 4.6 Merge g0 and g2 ----
+leg_strata <- get_leg(g2)   # strata legend
+leg_prop   <- get_leg(g0)   # geotechnical property legend
+g0n <- g0 + 
+  theme(
+    legend.title = element_blank(),
+    legend.box.margin = margin(0,0,0,0),
+    legend.position = "none"
+  )
+
+g2n <- g2 + 
+  theme(
+    legend.title = element_blank(),
+    legend.box.margin = margin(0,0,0,0),
+    legend.position = "none"
+  )
+p_leg_strata <- wrap_elements(full = leg_strata)
+p_leg_prop   <- wrap_elements(full = leg_prop)
+
+gleg <-  p_leg_prop | p_leg_strata 
+
+g3 <- g0n / g2n / gleg +
+  plot_layout(heights = c(.85, .85, 0.5)) &
+  theme(panel.spacing = unit(0, "cm"),
+        plot.margin = margin(0, 0, 0, 0))
+
+
+## 4.7 Save  plots ----
 ggsave("results/figures/ijv-z1.pdf",g1,width = 4.78, height = 2)
-ggsave("results/figures/ijv-z2.pdf",g0,width = 4.78, height = 2)
-ggsave("results/figures/ijv-y1.pdf",g2,width = 4.78, height = 2)
+ggsave("results/figures/ijv-z2y1.pdf",g3,width = 4.78, height = 2.8)
+
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 5. Cross-section plots  ----
