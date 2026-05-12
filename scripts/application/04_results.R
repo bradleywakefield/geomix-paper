@@ -9,7 +9,7 @@ library(ggtext)
 
 source('scripts/utils/prediction_scoring.R')
 load("data/processed/data3D.RData")
-
+path <- 'results/application/'
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #   2. Data setup: Load data, run evaluation functions ----
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

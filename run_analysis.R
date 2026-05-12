@@ -26,6 +26,12 @@ if (!requireNamespace("geomix", quietly = TRUE)) {
   devtools::install_github("bradleywakefield/geomix")
 }
 
+# --- Install geowarp if needed ---
+if (!requireNamespace("geowarp", quietly = TRUE)) {
+  if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools")
+  devtools::install_github("mbertolacci/geowarp")
+}
+
 # --- Simulation study ---
 source("run_simulation.R")
 

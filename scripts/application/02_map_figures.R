@@ -12,8 +12,8 @@ library(patchwork)
 library(concaveman)
 library(grid)
 
-# Requires in memory: full_df, geomix_setup
-# Run 01_process_data.R and 02_fit_models.R first
+# Requires in memory: full_df, data
+# Run 01_process_data.R first
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 2 Build IJV study area outline ----
@@ -28,7 +28,7 @@ pts <- full_df %>%
   distinct(x,y,loc_id,Z2flag) %>%
   left_join(
     distinct(drop_na(full_df),loc_id) %>%
-      mutate(testFlag = !(loc_id %in% distinct(drop_na(geomix_setup$df),loc_id)$loc_id),
+      mutate(testFlag = !(loc_id %in% distinct(drop_na(data),loc_id)$loc_id),
              testFlag = factor(testFlag,levels = c(F,T), labels =c("Train CPT","Test CPT")))
 
   )
@@ -113,8 +113,8 @@ dimy <- length(unique(coords[,2]))
 cell_grid$xid <- rep(1:dimx,dimy)
 cell_grid$yid <- rep(1:dimy,each=dimx)
 cell_grid <- st_transform(cell_grid,crs = 4326)
-cell_grid$valid <- cell_grid$loc_id %in% geomix_setup$df$loc_id
-cell_grid$z2 <- cell_grid$loc_id %in% drop_na(geomix_setup$df)$loc_id +
+cell_grid$valid <- cell_grid$loc_id %in% data$loc_id
+cell_grid$z2 <- cell_grid$loc_id %in% drop_na(data)$loc_id +
   cell_grid$loc_id %in% drop_na(full_df)$loc_id
 cell_grid$z2 <- factor(cell_grid$z2,labels = c("No CPT data","Test CPT data","Train CPT data"))
 

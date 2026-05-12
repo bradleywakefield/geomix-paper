@@ -415,12 +415,4 @@ if (ijv_comp_mode == "r") {
   run_comparisons(path, depth_interval = c(24,50))
 }
 
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# 9 Map figures and results ----
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-## 9.1 Map figures (saves data/processed/line_df.rds, data/processed/cell_grid_map.rds) ----
-source('scripts/application/04_map_figures.R')
-
-## 9.2 Results figures ----
-source('scripts/application/03_results.R')

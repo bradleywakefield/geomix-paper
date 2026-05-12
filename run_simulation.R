@@ -26,11 +26,24 @@ if (!requireNamespace("geomix", quietly = TRUE)) {
   if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools")
   devtools::install_github("bradleywakefield/geomix")
 }
+
+# --- Install geowarp if needed ---
+if (!requireNamespace("geowarp", quietly = TRUE)) {
+  if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools")
+  devtools::install_github("mbertolacci/geowarp")
+}
+
 library(geomix)
 library(tidyverse)
 
 # --- Step 1: Generate synthetic data ---
-source("scripts/simulation/01_generate_data.R")
+## Note although this script generates the synthetic data, the full MCMC sampling
+## in Step 2 is computationally intensive. To save time, you can skip Step 1 and 
+## load the pre-saved synthetic data instead (see Step 2 prompts).
+# source("scripts/simulation/01_generate_data.R")  
 
-# --- Step 2: Fit models and produce results ---
+# --- Step 2: Fit models and compute predictions ---
 source("scripts/simulation/02_fit_models.R")
+
+# --- Step 3: Produce results ---
+source('scripts/simulation/03_results.R')

@@ -12,7 +12,7 @@ params <- list(K = 8, alpha = matrix(c(10,17,14,19,7,11,6,12,
      lL = c(0.5,0.5,0.6,0.4,0.6,0.5,0.7,0.3),
      lD = c(1,0.8,0.6,0.7,0.6,1,0.7,0.5)+1,
      beta = 0.6, h = 2,
-     deltaK = 0.1, gammaScale = 0.5, kappa = 0.99)
+     deltaK = 0.1, gammaScale = 0.5, kappa = 0.90)
 
 ## 1.2 K=3 parameter set (small demo) ----
 params3 <- list(K = 3, alpha = matrix(c(10,19,7,0.1,0.15,0.2),ncol=2),
@@ -186,7 +186,7 @@ simulatedK8 <- generate_geomix_synthetic(params = params, prop_obs = 0.4)
 saveRDS(simulatedK8, 'data/simulation/synthetic_data.rds')
 message("Saved data/simulation/synthetic_data.rds")
 
-## 3.2 K=3 dataset (small demo / misspecification figure) ----
-simulatedK3 <- generate_geomix_synthetic(params = params3, prop_obs = 0.2)
-saveRDS(select(simulatedK3$data, ID, d, x, y, locID, Z1, Z2), 'data/simulation/offshore.rds')
-message("Saved data/simulation/offshore.rds")
+# ## 3.2 K=3 dataset (small demo / misspecification figure) ----
+# simulatedK3 <- generate_geomix_synthetic(params = params3, prop_obs = 0.2)
+# saveRDS(select(simulatedK3$data, ID, d, x, y, locID, Z1, Z2), 'data/simulation/offshore.rds')
+# message("Saved data/simulation/offshore.rds")

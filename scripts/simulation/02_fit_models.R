@@ -284,8 +284,4 @@ if (sim_comp_mode == "r") {
   run_comparisons(path, depth_interval = c(0,21))
 }
 
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# 7 Results figures ----
-#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-source('scripts/simulation/03_results.R')

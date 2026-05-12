@@ -29,11 +29,26 @@ if (!requireNamespace("geomix", quietly = TRUE)) {
   if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools")
   devtools::install_github("bradleywakefield/geomix")
 }
+
+# --- Install geowarp if needed ---
+if (!requireNamespace("geowarp", quietly = TRUE)) {
+  if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools")
+  devtools::install_github("mbertolacci/geowarp")
+}
+
 library(geomix)
 library(tidyverse)
 
 # --- Step 1: Data processing ---
 source("scripts/application/01_process_data.R")
 
-# --- Step 2: Fit models and produce results ---
-source("scripts/application/02_fit_models.R")
+# --- Step 2: Produce map and lines ---
+source('scripts/application/02_map_figures.R')
+rm(list = ls())
+
+# --- Step 3: Fit models and run predictions ---
+source("scripts/application/03_fit_models.R")
+rm(list = ls())
+
+# --- Step 4: Compute results ---
+source('scripts/application/04_results.R')
