@@ -1,6 +1,8 @@
 # Data files — excluded until data permissions are resolved
 data/**
 !data/README.md
+!data/simulation
+!data/simulation/synthetic_data.rds
 paper/
 latexmkrc
 # MCMC results and model outputs — large files, not tracked
