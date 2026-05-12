@@ -8,7 +8,8 @@ latexmkrc
 # MCMC results and model outputs — large files, not tracked
 results/simulation/
 results/application/
-results/
+results/figures/**
+results/tables/**
 # R session artefacts
 .Rhistory
 .RData

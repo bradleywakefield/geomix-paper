@@ -34,7 +34,7 @@ Download and unzip into the repository root so that `results/simulation/` is pre
 
 ---
 
-The remaining files are for the IJV Wind Farm application and are subject to confidentiality agreements. Please contact the authors to discuss access.
+**The remaining files are for the IJV Wind Farm application and are subject to confidentiality agreements. Please contact the authors to discuss access.**
 
 ---
 
@@ -65,3 +65,11 @@ Also generated during the application pipeline:
 |------|-----------|-------------|
 | `processed/line_df.rds` | `scripts/application/01_process_data.R` | Cross-section line definitions (grid cell indices for each seismic line) — required by `scripts/application/04_results.R` |
 | `processed/cell_grid_map.rds` | `scripts/application/02_map_figures.R` | WGS84 version of the spatial grid for map visualisation |
+
+## Pre-computed application results (Zenodo, restricted access)
+
+The `results/application/` folder — containing all MCMC chain outputs, posterior summaries, and predictions from the IJV wind farm application — is archived at:
+
+> **DOI: [10.5281/zenodo.20148509](https://doi.org/10.5281/zenodo.20148509)**
+
+Access is restricted because the files contain outputs derived from proprietary IJV geotechnical data. Request access via Zenodo. Once downloaded, unzip into the repository root so that `results/application/` is present before running `run_application.R`. When the `ask_run_mode()` prompt appears, select **load** to skip MCMC sampling and use these pre-computed results directly.
