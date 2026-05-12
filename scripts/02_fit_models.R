@@ -621,14 +621,16 @@ if (ijv_lgfm_mode %in% c("s", "c")) {
 }
 
 ### 3.7.1 Load samples ----
-samples_LGFM <- load_mcmc_samples(path, name = "LGFM", index=1:19, thin = 10) 
+samples_LGFM <- load_mcmc_samples(path, name = "LGFM", index=5:32, thin = 10) 
 
 ### 3.7.2 Extract parameters ----
 params_LGFM <- extract_parameters(samples_LGFM)
 merged_params_LGFM <- combine_chains(params_LGFM)
 
 ### 3.7.3 Diagnostics ----
-diagnostics_LGFM <- run_mcmc_diagnostics(params_LGFM, name = "LGFM")
+diagnostics_LGFM <- run_mcmc_diagnostics(params_LGFM, name = "LGFM",
+                                         exclude = c("sigma2_L",paste0("lL[",1:8,"]")),
+                                         Y1index = geomix_setup$controlGibbs$Z2_ind)
 save_diag_tables(diagnostics_LGFM, path, "LGFM")
 
 ### 3.7.4 Compute predictions ----
