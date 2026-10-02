@@ -19,3 +19,4 @@ results/tables/**
 # macOS
 .DS_Store
 .claude/worktrees/serene-bassi-fd076a/
+.positai
