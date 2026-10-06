@@ -7,10 +7,16 @@
 # The first 2,000 iterations of the existing chains in results/application/
 # (beta = 1.238) are used as the baseline comparator.
 #
-# Usage (from the project root, no interactive prompts):
-#   Rscript scripts/sensitivity/sensitivity_beta.R list        # show the grid
+# Usage in RStudio (project root as working directory, no interactive prompts):
+#   Set source_task in section 1.0.2 and click Source.
+#   "launch" starts one background R process per grid value and returns straight
+#   away; the fits keep running if the session is closed. Progress is written to
+#   results/sensitivity/beta/logs/, and "list" shows the batches completed so far.
+#
+# Usage from a shell (project root):
+#   Rscript scripts/sensitivity/sensitivity_beta.R list        # show the grid and progress
 #   Rscript scripts/sensitivity/sensitivity_beta.R run <i>     # fit grid value i (n_chains cores)
-#   Rscript scripts/sensitivity/sensitivity_beta.R launch      # fit all grid values in parallel
+#   Rscript scripts/sensitivity/sensitivity_beta.R launch      # fit all grid values in parallel and wait
 #                                                              #   (length(beta_grid) * n_chains cores)
 #   Rscript scripts/sensitivity/sensitivity_beta.R summarise   # diagnostics, predictions, tables, figures
 #
@@ -46,34 +52,73 @@ out_path    <- "results/sensitivity/beta"
 config_dir  <- function(beta) file.path(out_path, sprintf("beta_%.3f", beta))
 keep_index  <- (burn_batches + 1):n_batches
 
-### 1.0.2 Command-line mode ----
+### 1.0.2 What to do ----
+# Used when the script is sourced (or run with no arguments):
+#   "launch"    start a background fit for each grid value in source_index
+#   "list"      show the grid and the batches completed so far
+#   "summarise" diagnostics, predictions, tables, figures
+source_task  <- "launch"
+source_index <- seq_along(beta_grid)   # grid values to launch, e.g. 1:4 or c(2, 5)
+
 args <- commandArgs(trailingOnly = TRUE)
-mode <- if (length(args) >= 1) args[1] else "list"
-if (!mode %in% c("list", "run", "launch", "summarise")) {
-  stop("Unknown mode '", mode, "'. Use one of: list, run <i>, launch, summarise.")
+sourced <- length(args) == 0
+mode <- if (sourced) source_task else args[1]
+if (!mode %in% c("list", "run", "launch", "summarise") || (sourced && mode == "run")) {
+  stop("Unknown mode '", mode, "'. Use one of: list, run <i> (shell only), launch, summarise.")
+}
+
+# Ends the script here: returns to the console when sourced, closes R under Rscript.
+end_script <- function() if (interactive()) invokeRestart("abort") else quit(save = "no")
+
+# A fit writes a RUNNING file into its folder while it is going.
+marker_file <- function(beta) file.path(config_dir(beta), "RUNNING")
+grid_status <- function() {
+  data.frame(
+    i = seq_along(beta_grid), beta = beta_grid, path = sapply(beta_grid, config_dir),
+    batches_done = sapply(beta_grid, function(b) min(sapply(seq_len(n_chains), function(ch) {
+      length(list.files(file.path(config_dir(b), paste0("GeoMix_", ch)), pattern = "^batch_\\d+\\.rds$"))
+    }))),
+    running = file.exists(sapply(beta_grid, marker_file)))
 }
 
 if (mode == "list") {
-  print(data.frame(i = seq_along(beta_grid), beta = beta_grid,
-                   path = sapply(beta_grid, config_dir)))
-  quit(save = "no")
+  print(grid_status(), row.names = FALSE)
+  end_script()
 }
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # 2 Launch all grid values ------
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-# Starts one "run <i>" process per grid value and waits for all of them.
+# Starts one "run <i>" process per grid value. From a shell it waits for all of
+# them; when sourced it leaves them running in the background and returns.
 if (mode == "launch") {
   script <- sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE))
+  if (length(script) == 0) script <- "scripts/sensitivity/sensitivity_beta.R"
+  if (!file.exists(script)) stop("Cannot find ", script, "; set the working directory to the project root.")
   dir.create(file.path(out_path, "logs"), recursive = TRUE, showWarnings = FALSE)
-  status <- parallel::mclapply(seq_along(beta_grid), function(i) {
-    log_file <- file.path(out_path, "logs", sprintf("beta_%.3f.log", beta_grid[i]))
-    system2(file.path(R.home("bin"), "Rscript"), c(script, "run", i),
-            stdout = log_file, stderr = log_file)
-  }, mc.cores = length(beta_grid), mc.preschedule = FALSE)
-  print(data.frame(beta = beta_grid, exit_status = unlist(status)))
-  quit(save = "no")
+  rscript <- file.path(R.home("bin"), "Rscript")
+  log_of <- function(i) file.path(out_path, "logs", sprintf("beta_%.3f.log", beta_grid[i]))
+
+  if (sourced) {
+    status <- grid_status()
+    status$action <- ifelse(!status$i %in% source_index, "not selected",
+                     ifelse(status$running, "skipped: already running",
+                     ifelse(status$batches_done >= n_batches, "skipped: complete", "started")))
+    detach_cmd <- if (nzchar(Sys.which("setsid"))) c("setsid", "nohup") else "nohup"
+    for (i in status$i[status$action == "started"]) {
+      system2(detach_cmd[1], c(detach_cmd[-1], shQuote(rscript), shQuote(script), "run", i),
+              stdout = log_of(i), stderr = log_of(i), wait = FALSE)
+    }
+    print(status[, c("i", "beta", "batches_done", "action")], row.names = FALSE)
+    message("Logs: ", file.path(out_path, "logs"), ". Set source_task to \"list\" to check progress.")
+  } else {
+    status <- parallel::mclapply(seq_along(beta_grid), function(i) {
+      system2(rscript, c(script, "run", i), stdout = log_of(i), stderr = log_of(i))
+    }, mc.cores = length(beta_grid), mc.preschedule = FALSE)
+    print(data.frame(beta = beta_grid, exit_status = unlist(status)))
+  }
+  end_script()
 }
 
 library(geomix)
@@ -92,6 +137,14 @@ if (mode == "run") {
   path <- config_dir(beta)
   dir.create(path, recursive = TRUE, showWarnings = FALSE)
   message("beta = ", beta, " -> ", path)
+
+  marker <- marker_file(beta)
+  if (file.exists(marker)) {
+    stop("beta = ", beta, " looks to be running already. If that fit has died, delete ", marker, ".")
+  }
+  writeLines(c(paste("pid:", Sys.getpid()), paste("host:", Sys.info()[["nodename"]]),
+               paste("started:", format(Sys.time()))), marker)
+  reg.finalizer(globalenv(), function(e) unlink(marker), onexit = TRUE)
 
   ## 3.1 Model setup (as in scripts/application/03_fit_models.R, with beta replaced) ----
   load("data/processed/data3D.RData")
@@ -144,7 +197,7 @@ if (mode == "run") {
   batches_left <- if (resume) n_batches - min(n_done) else n_batches
   if (batches_left <= 0) {
     message("All ", n_batches, " batches already present for every chain; nothing to run.")
-    quit(save = "no")
+    end_script()
   }
   if (resume) message("Continuing from saved batches (completed per chain: ", paste(n_done, collapse = ", "), ").")
 
@@ -168,7 +221,7 @@ if (mode == "run") {
              mc.cores = n_chains,
              seed = seed)
   message("Finished beta = ", beta, " at ", format(Sys.time()))
-  quit(save = "no")
+  end_script()
 }
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
