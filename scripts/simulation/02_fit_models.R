@@ -209,6 +209,7 @@ if (sim_pred_mode == "l") {
     geomix_setup,
     nugget = F,
     include_samples = T,
+    run_parallel = TRUE,
     mc.cores =  parallel::detectCores()
   )
   saveRDS(pred, file.path(path, "predictions", "GeoMix_predictions.rds"))
@@ -267,6 +268,7 @@ if (sim_lgfm_pred_mode == "l") {
     geomix_setup,
     nugget = F,
     include_samples = T,
+    run_parallel = TRUE,
     mc.cores =  parallel::detectCores()
   )
   saveRDS(pred_LGFM, file.path(path, "predictions", "LGFM_predictions.rds"))
