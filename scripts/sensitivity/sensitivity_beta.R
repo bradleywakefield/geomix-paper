@@ -4,8 +4,9 @@
 # Refits GeoMix to the IJV data over a grid of beta values, with everything
 # else as in scripts/application/03_fit_models.R (m = 160, kappa = 0.9, lateral
 # length-scales fixed at their MAP estimates, cold-started chains, seed 16).
-# The first 2,000 iterations of the existing chains in results/application/
-# (beta = 1.238) are used as the baseline comparator.
+# The chains are run to 5,000 iterations (the first 2,000 were run first and
+# then extended). The main analysis chains in results/application/ (beta = 1.238,
+# 4,000 iterations) are used as the baseline comparator.
 #
 # Usage in RStudio (project root as working directory, no interactive prompts):
 #   Set source_task in section 1.0.2 and click Source.
@@ -20,12 +21,13 @@
 #                                                              #   (length(beta_grid) * n_chains cores)
 #   Rscript scripts/sensitivity/sensitivity_beta.R summarise   # diagnostics, predictions, tables, figures
 #
-# "run" saves batches of 125 iterations; if it is interrupted, calling it again
-# continues each chain from its last saved batch via run_chains(load_previous_state = TRUE).
-# NOTE: in geomix 0.1.0 that reload refills alpha and gammaMat by row although the
-# saved columns are in column order, so both restart from scrambled values (NIMBLE
-# warns "logProb is -Inf" for gammaMat). Prefer an uninterrupted run; treat the
-# iterations just after a continuation as burn-in, or rerun that grid value.
+# "run" saves batches of 125 iterations; if a grid value already has saved batches,
+# calling it again continues each chain from its last saved batch via
+# run_chains(load_previous_state = TRUE). This is how the 2,000-iteration chains
+# were extended to 5,000. Continuing needs a geomix with the reload fix (commit
+# ec553d2, "Fix matrix order when reloading alpha and gammaMat"); earlier versions
+# refill alpha and gammaMat by row although the saved columns are in column order,
+# and "run" stops if it finds that version.
 #
 # Reads : data/processed/data3D.RData, results/application/MAP_covariance.rds,
 #         results/application/beta.rds, results/application/GeoMix_*/ (baseline, read-only)
@@ -37,10 +39,10 @@
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 ### 1.0.1 Settings ----
-beta_grid   <- c(0.5, 0.8, 1.0, 1.1, 1.4, 1.6, 2.0, 2.5)
+beta_grid   <- c(0.5, 0.8, 1.0, 1.1, 1.4, 1.6, 2.0)
 n_chains    <- 4
-n_iter      <- 2000
-n_batches   <- 16        # 125 iterations per batch, as in the baseline run
+n_iter      <- 5000
+n_batches   <- 40        # 125 iterations per batch, as in the baseline run
 burn_batches <- 4        # 500 burn-in iterations, as in the paper
 thin        <- 10        # as in the paper
 seed        <- 16        # as in the baseline run
@@ -50,7 +52,7 @@ base_path   <- "results/application"       # baseline chains and fixed estimates
 out_path    <- "results/sensitivity/beta"
 
 config_dir  <- function(beta) file.path(out_path, sprintf("beta_%.3f", beta))
-keep_index  <- (burn_batches + 1):n_batches
+base_batches <- 32       # the baseline chains have 4,000 iterations (index 5:32 in 03_fit_models.R)
 
 ### 1.0.2 What to do ----
 # Used when the script is sourced (or run with no arguments):
@@ -199,7 +201,13 @@ if (mode == "run") {
     message("All ", n_batches, " batches already present for every chain; nothing to run.")
     end_script()
   }
-  if (resume) message("Continuing from saved batches (completed per chain: ", paste(n_done, collapse = ", "), ").")
+  if (resume) {
+    message("Continuing from saved batches (completed per chain: ", paste(n_done, collapse = ", "), ").")
+    if (any(grepl("byrow = TRUE", deparse(run_chains), fixed = TRUE))) {
+      stop("The installed geomix reloads alpha and gammaMat in the wrong order; install a version with commit ec553d2.")
+    }
+    if (length(unique(n_done)) > 1) stop("Chains have different numbers of saved batches: ", paste(n_done, collapse = ", "))
+  }
 
   writeLines(c(
     paste("beta:", beta), paste("started:", format(Sys.time())),
@@ -219,7 +227,8 @@ if (mode == "run") {
              run_parallel = TRUE,
              load_previous_state = resume,
              mc.cores = n_chains,
-             seed = seed)
+             # a new seed when continuing, so the extension does not reuse the random numbers of batch 1
+             seed = if (resume) seed + 1000 * n_done[1] else seed)
   message("Finished beta = ", beta, " at ", format(Sys.time()))
   end_script()
 }
@@ -292,9 +301,10 @@ batch_files <- function(path, ch) {
   f <- list.files(file.path(path, paste0("GeoMix_", ch)), pattern = "^batch_\\d+\\.rds$", full.names = TRUE)
   f[order(as.numeric(str_extract(basename(f), "\\d+")))]
 }
-configs$complete <- sapply(configs$path, function(p) {
-  all(sapply(seq_len(n_chains), function(ch) length(batch_files(p, ch)) >= n_batches))
-})
+configs$n_batches <- ifelse(configs$baseline, base_batches, n_batches)
+configs$complete <- mapply(function(p, nb) {
+  all(sapply(seq_len(n_chains), function(ch) length(batch_files(p, ch)) >= nb))
+}, configs$path, configs$n_batches)
 if (any(!configs$complete)) {
   warning("Skipping incomplete configurations (fewer than ", n_batches, " batches in some chain): beta = ",
           paste(configs$label[!configs$complete], collapse = ", "))
@@ -312,7 +322,7 @@ for (r in seq_len(nrow(configs))) {
 
   ### 4.3.1 Log-likelihood traces and run time (all iterations, including burn-in) ----
   for (ch in seq_len(n_chains)) {
-    files <- batch_files(cfg$path, ch)[seq_len(n_batches)]
+    files <- batch_files(cfg$path, ch)[seq_len(cfg$n_batches)]
     lp <- do.call(rbind, lapply(files, function(f) {
       readRDS(f)[, c("logProb_Z1[1]", "logProb_Z2[1]"), drop = FALSE]
     }))
@@ -326,7 +336,7 @@ for (r in seq_len(nrow(configs))) {
 
   ### 4.3.2 Load samples and extract parameters ----
   geomix_setup <- readRDS(file.path(cfg$path, "GeoMix_1/geomix_setup.rds"))
-  samples_post <- load_mcmc_samples(cfg$path, index = keep_index, thin = thin)
+  samples_post <- load_mcmc_samples(cfg$path, index = (burn_batches + 1):cfg$n_batches, thin = thin)
   params_post <- extract_parameters(samples_post)
 
   ### 4.3.3 Diagnostics ----
